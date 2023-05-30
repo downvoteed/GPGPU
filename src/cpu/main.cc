@@ -26,10 +26,10 @@ int main(int argc, char **argv)
     return 1;
   }
   std::cout << colored_frames.size() << " colored frames loaded!" << std::endl;
-  
+
   // Read the frames from the dataset in grayscale
   std::cout << "Loading gray frames..." << std::endl;
-  frame_helper::frames gray_frames = frame_helper::readFrames("dataset/demo.avi", true);
+  frame_helper::frames gray_frames = frame_helper::readFrames(argv[1], true);
   if (gray_frames.size() == 0)
   {
     std::cout << "No gray frames found!" << std::endl;
