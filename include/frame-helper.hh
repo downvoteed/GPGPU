@@ -119,4 +119,28 @@ namespace frame_helper
         return {colored_frames, gray_frames};
     }
 
+    /**
+     * Save frames to a video file
+     * @param path The path to the video file
+     * @param frames The frames to save
+     */
+    void saveFrames(const std::string &path, const frames &frames)
+    {
+        cv::VideoWriter video(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 1, cv::Size(frames[0].cols, frames[0].rows));
+        if (!video.isOpened())
+        {
+            std::cout << "Error opening video stream or file" << std::endl;
+            exit(1);
+        }
+
+        // Write the frames to the video
+        for (int i = 0; i < frames.size(); i++)
+        {
+            video.write(frames[i]);
+        }
+
+        // Release the video writer object
+        video.release();
+    }
+
 } // namespace frame_helper

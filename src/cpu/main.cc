@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 {
   // Declare the supported options.
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")("verbose", "enable verbose mode")("width", po::value<int>(), "set the width of the frame")("height", po::value<int>(), "set the height of the frame")("display", po::value<bool>()->default_value(true), "display the segmented frames");
+  desc.add_options()("help", "produce help message")("verbose", "enable verbose mode")("width", po::value<int>(), "set the width of the frame")("height", po::value<int>(), "set the height of the frame")("display", po::value<bool>()->default_value(true), "display the segmented frames")("output-path", po::value<std::string>(), "if set, save the video to the given path");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -88,7 +88,8 @@ int main(int argc, char **argv)
   {
     if (verbose)
     {
-      std::cout << "Processing frame " << i << "..." << std::endl;
+      const int progress = (int)(((float)i + 1) / (float)colored_frames.size() * 100);
+      std::cout << "Processing frame " << i + 1 << "/" << colored_frames.size() << " (" << progress << "%)" << std::endl;
     }
 
     if (i == 0)
@@ -109,8 +110,7 @@ int main(int argc, char **argv)
 
       color_helper::similarity_vectors color_similarities = {
           color_helper::similarity_vector(w * h, 0),
-          color_helper::similarity_vector(w * h, 0)
-      };
+          color_helper::similarity_vector(w * h, 0)};
       texture_helper::feature_vector features = {};
 
       for (int c = 0; c < w; c++)
@@ -146,9 +146,15 @@ int main(int argc, char **argv)
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(new_end - end).count();
       end = new_end;
 
-      std::cout << "Frame " << i << " processed in " << duration << "ms" << std::endl;
-      std::cout << "Total time: " << total_duration << "ms" << std::endl;
+      std::cout << "Frame " << i << " processed in " << duration << "ms - Total time: " << total_duration << "ms" << std::endl;
     }
+  }
+
+  // Save the segmented frames to a video file
+  if (vm.count("output-path"))
+  {
+    std::string output_path = vm["output-path"].as<std::string>();
+    frame_helper::saveFrames(output_path, segmented_frames);
   }
 
   // Display the segmented frames one by one and wait for a key press to display the next one
@@ -156,7 +162,7 @@ int main(int argc, char **argv)
   {
     for (int i = 0; i < segmented_frames.size(); i++)
     {
-      frame_helper::showFrame("Segmented Frame " + std::to_string(i), segmented_frames[i]);
+      frame_helper::showFrame("Segmented Frame " + std::to_string(i) + "/" + std::to_string(segmented_frames.size()), segmented_frames[i]);
     }
   }
 
