@@ -6,7 +6,7 @@
 
 namespace texture_helper
 {
-    using feature_vector = std::vector<u_int8_t>;
+    using feature_vector = std::vector<uint8_t>;
     using similarity_vector = std::vector<double>;
 
     /**
@@ -16,10 +16,10 @@ namespace texture_helper
      * @param y The y coordinate of the pixel
      * @return The LBP value of the pixel
      */
-    u_int8_t calculateLBP(cv::Mat frame, int x, int y)
+    uint8_t calculateLBP(cv::Mat frame, int x, int y)
     {
-        u_int8_t lbp = 0;
-        u_int8_t center = frame.at<u_int8_t>(y, x);
+        uint8_t lbp = 0;
+        uint8_t center = frame.at<uint8_t>(y, x);
 
         // Define the relative positions of the 8 neighbors
         int neighbors[8][2] = {
@@ -35,7 +35,7 @@ namespace texture_helper
             if (nx >= 0 && nx < frame.cols && ny >= 0 && ny < frame.rows)
             {
                 // If the neighbor is less than the center, set the bit to 1
-                u_int8_t neighbor = frame.at<u_int8_t>(ny, nx);
+                uint8_t neighbor = frame.at<uint8_t>(ny, nx);
                 lbp |= (neighbor < center) << i;
             }
         }

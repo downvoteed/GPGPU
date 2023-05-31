@@ -6,7 +6,7 @@
 
 namespace color_helper {
 
-    using color_component = std::vector<u_int8_t>;
+    using color_component = std::vector<uint8_t>;
     using color_components = std::vector<color_component>;
     using similarity_vector = std::vector<double>;
     using similarity_vectors = std::vector<similarity_vector>;
@@ -56,16 +56,16 @@ namespace color_helper {
         {
             // Calculate the color similarities for each color component
 
-            u_int8_t r1 = c1[0][i];
-            u_int8_t r2 = c2[0][i];
-            u_int8_t r_max = std::max(r1, r2);
-            u_int8_t r_min = std::min(r1, r2);
+            uint8_t r1 = c1[0][i];
+            uint8_t r2 = c2[0][i];
+            uint8_t r_max = std::max(r1, r2);
+            uint8_t r_min = std::min(r1, r2);
             r.push_back((double)r_min / (double)r_max);
 
-            u_int8_t g1 = c1[1][i];
-            u_int8_t g2 = c2[1][i];
-            u_int8_t g_max = std::max(g1, g2);
-            u_int8_t g_min = std::min(g1, g2);
+            uint8_t g1 = c1[1][i];
+            uint8_t g2 = c2[1][i];
+            uint8_t g_max = std::max(g1, g2);
+            uint8_t g_min = std::min(g1, g2);
             g.push_back((double)g_min / (double)g_max);
         }
 

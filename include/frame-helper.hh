@@ -50,14 +50,14 @@ namespace frame_helper
      * @param height The height of the frame
      * @return The segmented frame
      */
-    cv::Mat buildSegmentedFrame(const std::vector<u_int8_t> &segments, int width, int height)
+    cv::Mat buildSegmentedFrame(const std::vector<uint8_t> &segments, int width, int height)
     {
         cv::Mat frame = cv::Mat::zeros(height, width, CV_8UC1);
         for (int i = 0; i < segments.size(); i++)
         {
             int x = i % width;
             int y = i / width;
-            frame.at<u_int8_t>(y, x) = segments[i] * 255;
+            frame.at<uint8_t>(y, x) = segments[i] * 255;
         }
 
         return frame;

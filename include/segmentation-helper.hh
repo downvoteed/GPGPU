@@ -7,7 +7,7 @@
 namespace segmentation_helper
 {
 
-    using layer_vector = std::vector<u_int8_t>;
+    using layer_vector = std::vector<uint8_t>;
 
     /**
      * Segment a frame into foreground and background
