@@ -12,14 +12,14 @@ namespace texture_helper
     /**
      * Calculate the LBP value of a pixel in a frame
      * @param frame The OpenCV frame
-     * @param x The x coordinate of the pixel
-     * @param y The y coordinate of the pixel
+     * @param c The c coordinate of the pixel
+     * @param r The r coordinate of the pixel
      * @return The LBP value of the pixel
      */
-    uint8_t calculateLBP(cv::Mat frame, int x, int y)
+    uint8_t calculateLBP(cv::Mat frame, int c, int r)
     {
         uint8_t lbp = 0;
-        uint8_t center = frame.at<uint8_t>(y, x);
+        uint8_t center = frame.at<uint8_t>(r, c);
 
         // Define the relative positions of the 8 neighbors
         int neighbors[8][2] = {
@@ -28,40 +28,19 @@ namespace texture_helper
         // Compare the intensity value of the center pixel with its neighbors
         for (int i = 0; i < 8; i++)
         {
-            int nx = x + neighbors[i][0];
-            int ny = y + neighbors[i][1];
+            int nc = c + neighbors[i][0];
+            int nr = r + neighbors[i][1];
 
             // Check if the neighbor coordinates are within the image boundaries
-            if (nx >= 0 && nx < frame.cols && ny >= 0 && ny < frame.rows)
+            if (nc >= 0 && nc < frame.cols && nr >= 0 && nr < frame.rows)
             {
                 // If the neighbor is less than the center, set the bit to 1
-                uint8_t neighbor = frame.at<uint8_t>(ny, nx);
+                uint8_t neighbor = frame.at<uint8_t>(nr, nc);
                 lbp |= (neighbor < center) << i;
             }
         }
 
         return lbp;
-    }
-
-    /**
-     * Extract the LBP features from a frame
-     * @param frame The OpenCV frame
-     * @return The LBP features
-    */
-    feature_vector extract(cv::Mat frame)
-    {
-        feature_vector features;
-
-        // Calculate the LBP value of each pixel in the frame
-        for (int i = 0; i < frame.rows; i++)
-        {
-            for (int j = 0; j < frame.cols; j++)
-            {
-                features.push_back(calculateLBP(frame, j, i));
-            }
-        }
-
-        return features;
     }
 
     /**
@@ -72,7 +51,7 @@ namespace texture_helper
     */
     similarity_vector compare(feature_vector f1, feature_vector f2)
     {
-        similarity_vector similarities;
+        similarity_vector similarities = {};
 
         // Compare the LBP values of the two frames
         for (int i = 0; i < f1.size(); i++)

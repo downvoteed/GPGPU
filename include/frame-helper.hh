@@ -5,6 +5,7 @@
 namespace frame_helper
 {
     using frames = std::vector<cv::Mat>;
+    using frames_vector = std::vector<frames>;
 
     /**
      * Read a frame from a file
@@ -55,9 +56,9 @@ namespace frame_helper
         cv::Mat frame = cv::Mat::zeros(height, width, CV_8UC1);
         for (int i = 0; i < segments.size(); i++)
         {
-            int x = i % width;
-            int y = i / width;
-            frame.at<uint8_t>(y, x) = segments[i] * 255;
+            int c = i % width;
+            int r = i / width;
+            frame.at<uint8_t>(r, c) = segments[i] * 255;
         }
 
         return frame;
@@ -66,10 +67,11 @@ namespace frame_helper
     /**
      * Read a video file and return its frames
      * @param path The path to the video file
-     * @param gray Whether to read the frames in grayscale
+     * @param width The width of the frames (optional)
+     * @param height The height of the frames (optional)
      * @return The frames
      */
-    frames readFrames(const std::string &path, bool gray = false)
+    frames_vector readFrames(const std::string &path, const std::optional<int> &width = std::nullopt, const std::optional<int> &height = std::nullopt)
     {
         cv::VideoCapture video(path);
         if (!video.isOpened())
@@ -78,28 +80,43 @@ namespace frame_helper
             exit(1);
         }
 
-        frames frames;
+        frames colored_frames = {};
+        frames gray_frames = {};
+
+        // Read the video frame by frame
         while (true)
         {
             cv::Mat frame;
             video >> frame;
 
+            // Break the loop at the end of the video
             if (frame.empty())
             {
                 break;
             }
 
-            if (gray)
+            // Resize the frame if needed
+            if (width.has_value() || height.has_value())
             {
-                cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
+                int w = width.value_or(frame.cols);
+                int h = height.value_or(frame.rows);
+                cv::resize(frame, frame, cv::Size(w, h));
             }
 
-            cv::resize(frame, frame, cv::Size(1500, 1500));
-            frames.push_back(frame);
+            // Add the frame to the frames vector
+            colored_frames.push_back(frame);
+
+            // Convert the frame to grayscale and add it to the frames vector
+            cv::Mat gray_frame;
+            cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY);
+            gray_frames.push_back(gray_frame);
         }
 
+        // Release the video capture object
         video.release();
-        return frames;
+
+        // Return the frames
+        return {colored_frames, gray_frames};
     }
 
 } // namespace frame_helper

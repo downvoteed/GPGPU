@@ -6,7 +6,6 @@
 
 namespace segmentation_helper
 {
-
     using layer_vector = std::vector<uint8_t>;
 
     /**

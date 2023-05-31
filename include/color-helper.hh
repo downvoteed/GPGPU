@@ -6,72 +6,60 @@
 
 namespace color_helper {
 
-    using color_component = std::vector<uint8_t>;
-    using color_components = std::vector<color_component>;
+    using color_components = std::vector<uint8_t>;
     using similarity_vector = std::vector<double>;
     using similarity_vectors = std::vector<similarity_vector>;
 
     /**
-     * Extract the color components (R/G) from a frame
+     * Extract the color components (R/G) from a frame at position c, r
      * @param frame The OpenCV frame
+     * @param c The c coordinate
+     * @param r The r coordinate
      * @return The color components
      */
-    color_components convert(cv::Mat frame)
+    color_components convert(cv::Mat frame, int c, int r)
     {
-        color_components pixels;
-        color_component r;
-        color_component g;
+        color_components components = {};
 
-        // Extract the color components from the frame for each pixel
-        for (int i = 0; i < frame.rows; i++)
-        {
-            for (int j = 0; j < frame.cols; j++)
-            {
-                // Push the color components to the vectors
-                r.push_back(frame.at<cv::Vec3b>(i, j)[2]);
-                g.push_back(frame.at<cv::Vec3b>(i, j)[1]);
-            }
-        }
+        // Extract the color components from the frame for the given coordinates
+        cv::Vec3b pixel = frame.at<cv::Vec3b>(r, c);
+        u_int8_t r_component = pixel[2];
+        u_int8_t g_component = pixel[1];
 
-        // Push the color components to the vector of color components
-        pixels.push_back(r);
-        pixels.push_back(g);
-        return pixels;
+        components.push_back(r_component);
+        components.push_back(g_component);
+        return components;
     }
 
     /**
-     * Compare the color components of two frames
-     * @param c1 The color components of the first frame
-     * @param c2 The color components of the second frame
+     * Compare the color components of two frames at position c, r
+     * @param frame1 The first OpenCV frame
+     * @param frame2 The second OpenCV frame
+     * @param c The c coordinate
+     * @param r The r coordinate
      * @return The color similarities
      */
-    similarity_vectors compare(color_components c1, color_components c2)
+    similarity_vector compare(cv::Mat frame1, cv::Mat frame2, int c, int r)
     {
-        similarity_vectors similarities;
-        similarity_vector r;
-        similarity_vector g;
+        similarity_vector similarities;
 
-        // Calculate the color similarities for each pixel
-        for (int i = 0; i < c1[0].size(); i++)
-        {
-            // Calculate the color similarities for each color component
+        // Calculate the color components for the two frames at the given coordinates
+        color_components c1 = convert(frame1, c, r);
+        color_components c2 = convert(frame2, c, r);
 
-            uint8_t r1 = c1[0][i];
-            uint8_t r2 = c2[0][i];
-            uint8_t r_max = std::max(r1, r2);
-            uint8_t r_min = std::min(r1, r2);
-            r.push_back((double)r_min / (double)r_max);
+        // Calculate the color similarities for each color component
+        uint8_t r1 = c1[0];
+        uint8_t r2 = c2[0];
+        uint8_t r_max = std::max(r1, r2);
+        uint8_t r_min = std::min(r1, r2);
+        similarities.push_back((double)r_min / (double)r_max);
 
-            uint8_t g1 = c1[1][i];
-            uint8_t g2 = c2[1][i];
-            uint8_t g_max = std::max(g1, g2);
-            uint8_t g_min = std::min(g1, g2);
-            g.push_back((double)g_min / (double)g_max);
-        }
+        uint8_t g1 = c1[1];
+        uint8_t g2 = c2[1];
+        uint8_t g_max = std::max(g1, g2);
+        uint8_t g_min = std::min(g1, g2);
+        similarities.push_back((double)g_min / (double)g_max);
 
-        // Push the color similarities to the vector of color similarities
-        similarities.push_back(r);
-        similarities.push_back(g);
         return similarities;
     }
 
