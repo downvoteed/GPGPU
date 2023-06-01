@@ -41,7 +41,8 @@ namespace frame_helper
         cv::namedWindow(name, cv::WINDOW_AUTOSIZE);
         cv::imshow(name, frame);
         cv::waitKey(0);
-        cv::destroyWindow(name);
+
+		cv::destroyWindow(name);
     }
 
     /**
@@ -126,19 +127,34 @@ namespace frame_helper
      */
     void saveFrames(const std::string &path, const frames &frames)
     {
-        cv::VideoWriter video(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 1, cv::Size(frames[0].cols, frames[0].rows));
+		cv::Size frameSize(frames[0].cols, frames[0].rows);
+        cv::VideoWriter video(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 24, frameSize);
         if (!video.isOpened())
         {
             std::cout << "Error opening video stream or file" << std::endl;
             exit(1);
         }
 
-        // Write the frames to the video
-        for (int i = 0; i < frames.size(); i++)
-        {
-            video.write(frames[i]);
-        }
+        std::cout << frames.size () << std::endl;
+		// Write the frames to the video
+		for (int i = 0; i < frames.size(); i++)
+		{
+            auto frame = frames[i];
+			cv::Mat bgrFrame;
 
+			// Check if the frame is grayscale (single channel)
+			if (frames[i].channels() == 1)
+			{
+				// Convert grayscale to BGR
+				cv::cvtColor(frames[i], bgrFrame, cv::COLOR_GRAY2BGR);
+			}
+			else
+			{
+				bgrFrame = frames[i];
+			}
+
+			video.write(bgrFrame);
+		}
         // Release the video writer object
         video.release();
     }

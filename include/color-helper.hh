@@ -23,8 +23,8 @@ namespace color_helper {
 
         // Extract the color components from the frame for the given coordinates
         cv::Vec3b pixel = frame.at<cv::Vec3b>(r, c);
-        u_int8_t r_component = pixel[2];
-        u_int8_t g_component = pixel[1];
+        uint8_t r_component = pixel[2];
+        uint8_t g_component = pixel[1];
 
         components.push_back(r_component);
         components.push_back(g_component);
