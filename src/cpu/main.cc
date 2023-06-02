@@ -46,11 +46,6 @@ int main(int argc, char **argv)
   auto start = std::chrono::high_resolution_clock::now();
 
   // Read the frames from the dataset in color
-  if (verbose)
-  {
-    std::cout << "Loading colored frames..." << std::endl;
-  }
-
   const std::optional<int> width = vm.count("width") > 0 ? std::make_optional(vm["width"].as<int>()) : std::nullopt;
   const std::optional<int> height = vm.count("height") > 0 ? std::make_optional(vm["height"].as<int>()) : std::nullopt;
 
@@ -58,20 +53,21 @@ int main(int argc, char **argv)
   frame_helper::frames colored_frames = frames_vector[0];
   frame_helper::frames gray_frames = frames_vector[1];
 
+  if (colored_frames.size() == 0)
+  {
+    std::cout << "No colored frames found!" << std::endl;
+    return 1;
+  }
+
+  if (gray_frames.size() == 0)
+  {
+    std::cout << "No grayscale frames found!" << std::endl;
+    return 1;
+  }
+
   if (verbose)
   {
-    if (colored_frames.size() == 0)
-    {
-      std::cout << "No colored frames found!" << std::endl;
-      return 1;
-    }
-    if (gray_frames.size() == 0)
-    {
-      std::cout << "No grayscale frames found!" << std::endl;
-      return 1;
-    }
-
-    std::cout << colored_frames.size() << " frames loaded!" << std::endl;
+    std::cout << colored_frames.size() << " frames loaded!";
   }
 
   // Extract the first frame from the dataset as the background
@@ -82,7 +78,7 @@ int main(int argc, char **argv)
 
   if (verbose)
   {
-    std::cout << "Frame size: " << w << "x" << h << std::endl;
+    std::cout << " - Frame size: " << w << "x" << h << std::endl;
   }
 
   // Process the frames
@@ -90,12 +86,21 @@ int main(int argc, char **argv)
   frame_helper::frames segmented_frames = {};
 
   auto end = std::chrono::high_resolution_clock::now();
+  auto duration_avg = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
   for (int i = 0; i < colored_frames.size(); i++)
   {
     if (verbose)
     {
+      // Remove the previous line
+      if (i > 0)
+      {
+        std::cout << "\033[1A\033[2K";
+      }
+
+      // Display the progress
       const int progress = (int)(((float)i + 1) / (float)colored_frames.size() * 100);
-      std::cout << "Processing frame " << i + 1 << "/" << colored_frames.size() << " (" << progress << "%)" << std::endl;
+      std::cout << "Processing frame " << i + 1 << "/" << colored_frames.size() << " (" << progress << "%)";
     }
 
     if (i == 0)
@@ -148,12 +153,21 @@ int main(int argc, char **argv)
     if (verbose)
     {
       auto new_end = std::chrono::high_resolution_clock::now();
-      auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(new_end - end).count();
+      duration_avg = (duration_avg + duration) / 2;
+      auto estimated_remaining_time = duration_avg * (colored_frames.size() - i - 1) / 1000;
+
       end = new_end;
 
-      std::cout << "Frame " << i << " processed in " << duration << "ms - Total time: " << total_duration << "ms" << std::endl;
+      std::cout << " - processed in " << duration << "ms - estimated time remaining: " << estimated_remaining_time << "s" << std::endl;
     }
+  }
+
+  if (verbose)
+  {
+    auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "Processing completed in " << total_duration << "ms" << std::endl;
   }
 
   // Save the segmented frames to a video file

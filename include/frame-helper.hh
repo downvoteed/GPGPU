@@ -128,14 +128,13 @@ namespace frame_helper
     void saveFrames(const std::string &path, const frames &frames)
     {
 		cv::Size frameSize(frames[0].cols, frames[0].rows);
-        cv::VideoWriter video(path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 24, frameSize);
+        cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), 24, frameSize);
         if (!video.isOpened())
         {
             std::cout << "Error opening video stream or file" << std::endl;
             exit(1);
         }
 
-        std::cout << frames.size () << std::endl;
 		// Write the frames to the video
 		for (int i = 0; i < frames.size(); i++)
 		{
@@ -155,6 +154,7 @@ namespace frame_helper
 
 			video.write(bgrFrame);
 		}
+
         // Release the video writer object
         video.release();
     }
