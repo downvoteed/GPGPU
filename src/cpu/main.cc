@@ -7,10 +7,16 @@
 #include <segmentation-helper.hh>
 #include <boost/program_options.hpp>
 
+#include "../stats/rss.hh"
+
 namespace po = boost::program_options;
 
 int main(int argc, char **argv)
 {
+
+    LogRss logger;
+    logger.begin_rss_loging();
+
   // Declare the supported options.
   po::options_description desc("Allowed options");
   desc.add_options()("help", "produce help message")("verbose", "enable verbose mode")("width", po::value<int>(), "set the width of the frame")("height", po::value<int>(), "set the height of the frame")("display", po::value<bool>()->default_value(true), "display the segmented frames")("output-path", po::value<std::string>(), "if set, save the video to the given path");
