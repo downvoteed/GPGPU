@@ -60,6 +60,22 @@ int main(int argc, char **argv) {
     BOOST_LOG_TRIVIAL(info) << "Starting the program";
   }
 
+  // Determine the number of threads to use
+  int num_threads = vm["jobs"].as<int>();
+  if (num_threads < 0) {
+    BOOST_LOG_TRIVIAL(error) << "Invalid number of threads!";
+    return 1;
+  }
+
+  const int max_threads = std::thread::hardware_concurrency();
+  if (num_threads == 0 || num_threads > max_threads) {
+    num_threads = max_threads;
+  }
+
+  if (verbose) {
+    BOOST_LOG_TRIVIAL(info) << "Using " << num_threads << " threads";
+  }
+
   // Start a timer to measure the execution time
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -124,21 +140,6 @@ int main(int argc, char **argv) {
   }
 
   // Create a thread pool
-  int num_threads = vm["jobs"].as<int>();
-  if (num_threads < 0) {
-    BOOST_LOG_TRIVIAL(error) << "Invalid number of threads!";
-    return 1;
-  }
-
-  const int max_threads = std::thread::hardware_concurrency();
-  if (num_threads == 0 || num_threads > max_threads) {
-    num_threads = max_threads;
-  }
-
-  if (verbose) {
-    BOOST_LOG_TRIVIAL(info) << "Using " << num_threads << " threads";
-  }
-
   boost::asio::thread_pool pool(num_threads);
 
   // Process the frames

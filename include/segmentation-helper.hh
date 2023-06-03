@@ -8,14 +8,15 @@
 namespace segmentation_helper {
 using layer_vector = std::vector<uint8_t>;
 
+const double THRESHOLD = 0.67;
+
 /**
  * Segment a frame into foreground and background
  * @param color_similarities The color similarities between the current frame
  * and the background frame
  * @param texture_similarities The texture similarities between the current
  * frame and the background frame
- * @return The a vector of boolean values (1 or 0) representing the foreground
- * or the background
+ * @return The values of the segments between 0 and 1, where 0 is the background
  */
 layer_vector segment(color_helper::similarity_vectors color_similarities,
                      texture_helper::similarity_vector texture_similarities) {
@@ -43,13 +44,7 @@ layer_vector segment(color_helper::similarity_vectors color_similarities,
     double similarity = similarities[0] + similarities[1] + similarities[2];
 
     // If the similarity is greater than 0.67, it is the foreground
-    if (similarity >= 0.67) {
-      segments.push_back(0);
-    }
-    // Otherwise, it is the background
-    else {
-      segments.push_back(1);
-    }
+    segments.push_back(similarity >= THRESHOLD ? 0 : 1);
   }
 
   return segments;
@@ -116,6 +111,7 @@ void segment_frame(int i, texture_helper::feature_vector bg_features,
       segmentation_helper::segment(color_similarities, texture_similarities);
   cv::Mat segmented_frame = frame_helper::buildSegmentedFrame(segments, w, h);
 
+  // Log the duration of the segmentation
   if (verbose) {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration =
