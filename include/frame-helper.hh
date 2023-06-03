@@ -5,6 +5,7 @@
 namespace frame_helper
 {
     using frames = std::vector<cv::Mat>;
+    using frames_ref = std::vector<cv::Mat *>;
     using frames_vector = std::vector<frames>;
 
     /**
@@ -42,7 +43,7 @@ namespace frame_helper
         cv::imshow(name, frame);
         cv::waitKey(0);
 
-		cv::destroyWindow(name);
+        cv::destroyWindow(name);
     }
 
     /**
@@ -125,9 +126,9 @@ namespace frame_helper
      * @param path The path to the video file
      * @param frames The frames to save
      */
-    void saveFrames(const std::string &path, const frames &frames)
+    void saveFrames(const std::string &path, frames_ref &frames)
     {
-		cv::Size frameSize(frames[0].cols, frames[0].rows);
+        cv::Size frameSize(frames[0]->cols, frames[0]->rows);
         cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), 24, frameSize);
         if (!video.isOpened())
         {
@@ -135,25 +136,25 @@ namespace frame_helper
             exit(1);
         }
 
-		// Write the frames to the video
-		for (int i = 0; i < frames.size(); i++)
-		{
+        // Write the frames to the video
+        for (int i = 0; i < frames.size(); i++)
+        {
             auto frame = frames[i];
-			cv::Mat bgrFrame;
+            cv::Mat bgrFrame;
 
-			// Check if the frame is grayscale (single channel)
-			if (frames[i].channels() == 1)
-			{
-				// Convert grayscale to BGR
-				cv::cvtColor(frames[i], bgrFrame, cv::COLOR_GRAY2BGR);
-			}
-			else
-			{
-				bgrFrame = frames[i];
-			}
+            // Check if the frame is grayscale (single channel)
+            if (frames[i]->channels() == 1)
+            {
+                // Convert grayscale to BGR
+                cv::cvtColor(*frame, bgrFrame, cv::COLOR_GRAY2BGR);
+            }
+            else
+            {
+                bgrFrame = *(frames[i]);
+            }
 
-			video.write(bgrFrame);
-		}
+            video.write(bgrFrame);
+        }
 
         // Release the video writer object
         video.release();
