@@ -1,5 +1,7 @@
 build/
 *.mp4
+*.out
+*.log
 
 .vscode/
 

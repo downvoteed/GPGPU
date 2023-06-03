@@ -41,9 +41,8 @@ if (NOT APPLE)
     set(CMAKE_CUDA_STANDARD 14)
 endif()
 
-find_package(Threads REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(Boost COMPONENTS program_options REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options log thread)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})

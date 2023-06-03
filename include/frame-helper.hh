@@ -1,5 +1,6 @@
 #pragma once
 
+#include <logger.hh>
 #include <opencv2/opencv.hpp>
 
 namespace frame_helper {
@@ -21,7 +22,7 @@ cv::Mat readFrame(const std::string &path, bool gray = false) {
 
   cv::Mat frame = cv::imread(path, flag);
   if (frame.empty()) {
-    std::cout << "Could not read the image: " << path << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "Could not read the image: " << path;
     exit(1);
   }
 
@@ -73,7 +74,7 @@ frames_vector readFrames(const std::string &path,
                          const std::optional<int> &height = std::nullopt) {
   cv::VideoCapture video(path);
   if (!video.isOpened()) {
-    std::cout << "Error opening video stream or file" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "Could not open the video: " << path;
     exit(1);
   }
 
@@ -124,7 +125,7 @@ void saveFrames(const std::string &path, frames_ref &frames, int fps = 24) {
   cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), fps,
                         frameSize);
   if (!video.isOpened()) {
-    std::cout << "Error opening video stream or file" << std::endl;
+    BOOST_LOG_TRIVIAL(error) << "Could not open the video: " << path;
     exit(1);
   }
 
