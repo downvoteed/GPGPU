@@ -145,12 +145,12 @@ public:
 	void end_rss_loging()
 	{
 		auto end_time = std::chrono::high_resolution_clock::now();
-		size_t seconds = std::chrono::duration_cast<std::chrono::seconds>(
+		size_t second = std::chrono::duration_cast<std::chrono::seconds>(
 			end_time - start_time)
 			.count();
 
 		exit_signal.set_value();
 		memory_thread->join();
-		printf("Time to completion %.2f sec\n", double(seconds) / 1000.0);
+		printf("Time to completion %.2f sec\n", double(second) / 1000.0);
 	}
 };
