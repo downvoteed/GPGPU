@@ -1,14 +1,14 @@
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
 #include <boost/program_options.hpp>
 #include <chrono>
 #include <iostream>
 
+#include "../stats/rss.hh"
 #include <color-helper.hh>
 #include <frame-helper.hh>
 #include <segmentation-helper.hh>
 #include <texture-helper.hh>
-#include <thread-pool.hh>
-
-#include "../stats/rss.hh"
 
 namespace po = boost::program_options;
 
@@ -110,7 +110,9 @@ int main(int argc, char **argv) {
       "display the segmented frames")(
       "output-path", po::value<std::string>(),
       "if set, save the video to the given path")(
-      "jobs", po::value<int>()->default_value(1),
+      "jobs,j",
+      po::value<int>()->default_value(1)->implicit_value(
+          std::thread::hardware_concurrency()),
       "set the number of threads to use");
 
   po::variables_map vm;
@@ -186,9 +188,22 @@ int main(int argc, char **argv) {
   }
 
   // Create a thread pool
-  // int num_threads = vm["jobs"].as<int>();
-  // ThreadPool threadPool(num_threads);
-  std::vector<std::thread> threads;
+  int num_threads = vm["jobs"].as<int>();
+  if (num_threads < 0) {
+    std::cout << "Invalid number of threads!" << std::endl;
+    return 1;
+  }
+
+  const int max_threads = std::thread::hardware_concurrency();
+  if (num_threads == 0 || num_threads > max_threads) {
+    num_threads = max_threads;
+  }
+
+  if (verbose) {
+    std::cout << "Using " << num_threads << " threads" << std::endl;
+  }
+
+  boost::asio::thread_pool pool(num_threads);
 
   // Process the frames
   frame_helper::frames_ref segmented_frames = {};
@@ -196,24 +211,17 @@ int main(int argc, char **argv) {
     // Add a task to the thread pool
     cv::Mat *result = new cv::Mat();
 
-    // threadPool.enqueue([i, bg_features, colored_bg_frame, colored_frames,
-    //                     gray_frames, w, h, start, verbose, &result]() {
-    //   segment_frame(i, bg_features, colored_bg_frame, colored_frames,
-    //                 gray_frames, w, h, start, verbose, std::ref(*result));
-    // });
-
-    threads.push_back(std::thread(segment_frame, i, bg_features,
-                                  colored_bg_frame, colored_frames, gray_frames,
-                                  w, h, start, verbose, std::ref(*result)));
+    boost::asio::post(pool, [i, bg_features, colored_bg_frame, colored_frames,
+                             gray_frames, w, h, start, verbose, result] {
+      segment_frame(i, bg_features, colored_bg_frame, colored_frames,
+                    gray_frames, w, h, start, verbose, std::ref(*result));
+    });
 
     segmented_frames.push_back(result);
   }
 
   // Wait for all threads to finish
-  // while (!threadPool.wait()) {}
-  for (std::thread &t : threads) {
-    t.join();
-  }
+  pool.join();
 
   auto end = std::chrono::high_resolution_clock::now();
 
