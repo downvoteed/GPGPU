@@ -102,18 +102,19 @@ int main(int argc, char **argv) {
 
   // Declare the supported options.
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")(
-      "verbose", "enable verbose mode")("width", po::value<int>(),
-                                        "set the width of the frame")(
+  desc.add_options()("help,h", "produce help message")(
+      "verbose,v", "enable verbose mode")("width", po::value<int>(),
+                                          "set the width of the frame")(
       "height", po::value<int>(), "set the height of the frame")(
-      "display", po::value<bool>()->default_value(true),
+      "display,d", po::value<bool>()->default_value(true),
       "display the segmented frames")(
-      "output-path", po::value<std::string>(),
+      "output-path,o", po::value<std::string>(),
       "if set, save the video to the given path")(
       "jobs,j",
       po::value<int>()->default_value(1)->implicit_value(
           std::thread::hardware_concurrency()),
-      "set the number of threads to use");
+      "set the number of threads to use")(
+      "fps,f", po::value<int>()->default_value(24), "set the FPS of the video");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -236,7 +237,9 @@ int main(int argc, char **argv) {
   // Save the segmented frames to a video file
   if (vm.count("output-path")) {
     std::string output_path = vm["output-path"].as<std::string>();
-    frame_helper::saveFrames(output_path, segmented_frames);
+    int fps = vm["fps"].as<int>();
+
+    frame_helper::saveFrames(output_path, segmented_frames, fps);
   }
 
   // Display the segmented frames one by one and wait for a key press to display

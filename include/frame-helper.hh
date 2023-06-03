@@ -117,10 +117,11 @@ frames_vector readFrames(const std::string &path,
  * Save frames to a video file
  * @param path The path to the video file
  * @param frames The frames to save
+ * @param fps The number of frames per second
  */
-void saveFrames(const std::string &path, frames_ref &frames) {
+void saveFrames(const std::string &path, frames_ref &frames, int fps = 24) {
   cv::Size frameSize(frames[0]->cols, frames[0]->rows);
-  cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), 24,
+  cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), fps,
                         frameSize);
   if (!video.isOpened()) {
     std::cout << "Error opening video stream or file" << std::endl;
