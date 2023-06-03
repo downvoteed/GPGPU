@@ -15,7 +15,6 @@ int main(int argc, char **argv)
 {
 
     LogRss logger;
-    logger.begin_rss_loging();
 
   // Declare the supported options.
   po::options_description desc("Allowed options");
@@ -52,6 +51,10 @@ int main(int argc, char **argv)
   frame_helper::frames_vector frames_vector = frame_helper::readFrames(argv[1], width, height);
   frame_helper::frames colored_frames = frames_vector[0];
   frame_helper::frames gray_frames = frames_vector[1];
+
+    // log RAM usage and display it
+    if (verbose)
+		logger.begin_rss_loging();
 
   if (colored_frames.size() == 0)
   {
@@ -92,12 +95,6 @@ int main(int argc, char **argv)
   {
     if (verbose)
     {
-      // Remove the previous line
-      if (i > 0)
-      {
-        std::cout << "\033[1A\033[2K";
-      }
-
       // Display the progress
       const int progress = (int)(((float)i + 1) / (float)colored_frames.size() * 100);
       std::cout << "Processing frame " << i + 1 << "/" << colored_frames.size() << " (" << progress << "%)";

@@ -129,10 +129,10 @@ public:
 
 					this->seconds++;
 
-					printf("   rss %.4f MB\n", current_rss);
+					printf(" - ");
+					printf("rss %.4f MB\n", current_rss);
 				}
 			}
-
 			printf("final rss %.2f MB\n", toMB(get_current_rss()));
 			}));
 		start_time = std::chrono::high_resolution_clock::now();
