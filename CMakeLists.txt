@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
+
 project(
     gpgpu
     VERSION 0.1.0
     DESCRIPTION "GPGPU"
-    LANGUAGES CXX CUDA
+    LANGUAGES CXX
 )
 
 find_package(OpenCV QUIET)
@@ -34,8 +35,12 @@ if(POLICY CMP0079)
   cmake_policy(SET CMP0079 NEW)
 endif()
 
+if (NOT APPLE)
+    find_package(CUDA REQUIRED)
+    enable_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 14)
+endif()
 
-find_package(CUDA REQUIRED)
 find_package(Threads REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Boost COMPONENTS program_options REQUIRED)
@@ -46,7 +51,6 @@ include_directories(include)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -pedantic")
 
 subdirs(src)
