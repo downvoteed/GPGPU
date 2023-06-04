@@ -14,19 +14,21 @@ using frames_vector = std::vector<frames>;
  * @param gray Whether to read the frame in grayscale
  * @return The OpenCV frame
  */
-cv::Mat readFrame(const std::string &path, bool gray = false) {
+const cv::Mat &readFrame(const std::string &path, const bool gray = false) {
   int flag = cv::IMREAD_COLOR;
   if (gray) {
     flag = cv::IMREAD_GRAYSCALE;
   }
 
-  cv::Mat frame = cv::imread(path, flag);
-  if (frame.empty()) {
+  cv::Mat *frame = new cv::Mat();
+  *frame = cv::imread(path, flag);
+
+  if (frame->empty()) {
     BOOST_LOG_TRIVIAL(error) << "Could not read the image: " << path;
     exit(1);
   }
 
-  return frame;
+  return *frame;
 }
 
 /**
@@ -50,16 +52,16 @@ void showFrame(const std::string &name, const cv::Mat &frame) {
  * @param height The height of the frame
  * @return The segmented frame
  */
-cv::Mat buildSegmentedFrame(const std::vector<uint8_t> &segments, int width,
-                            int height) {
-  cv::Mat frame = cv::Mat::zeros(height, width, CV_8UC1);
+const cv::Mat &buildSegmentedFrame(const std::vector<uint8_t> &segments,
+                                   const int width, const int height) {
+  cv::Mat *frame = new cv::Mat(height, width, CV_8UC1);
   for (unsigned long i = 0; i < segments.size(); i++) {
     int c = i % width;
     int r = i / width;
-    frame.at<uint8_t>(r, c) = segments[i] * 255;
+    frame->at<uint8_t>(r, c) = segments[i] * 255;
   }
 
-  return frame;
+  return *frame;
 }
 
 /**
@@ -69,9 +71,10 @@ cv::Mat buildSegmentedFrame(const std::vector<uint8_t> &segments, int width,
  * @param height The height of the frames (optional)
  * @return The frames
  */
-frames_vector readFrames(const std::string &path,
-                         const std::optional<int> &width = std::nullopt,
-                         const std::optional<int> &height = std::nullopt) {
+const frames_vector &
+readFrames(const std::string &path,
+           const std::optional<int> &width = std::nullopt,
+           const std::optional<int> &height = std::nullopt) {
   cv::VideoCapture video(path);
   if (!video.isOpened()) {
     BOOST_LOG_TRIVIAL(error) << "Could not open the video: " << path;
@@ -111,7 +114,10 @@ frames_vector readFrames(const std::string &path,
   video.release();
 
   // Return the frames
-  return {colored_frames, gray_frames};
+  frames_vector *frames = new frames_vector();
+  frames->push_back(colored_frames);
+  frames->push_back(gray_frames);
+  return *frames;
 }
 
 /**
@@ -120,7 +126,7 @@ frames_vector readFrames(const std::string &path,
  * @param frames The frames to save
  * @param fps The number of frames per second
  */
-void saveFrames(const std::string &path, frames_ref &frames, int fps = 24) {
+void saveFrames(const std::string &path, frames_ref &frames, const int fps = 24) {
   cv::Size frameSize(frames[0]->cols, frames[0]->rows);
   cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), fps,
                         frameSize);

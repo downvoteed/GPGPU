@@ -21,17 +21,19 @@ int main(int argc, char **argv) {
   desc.add_options()("help,h", "produce help message")("verbose,v",
                                                        "enable verbose mode")(
       "log-file,l", po::value<std::string>(), "set the log file path")(
-      "width", po::value<int>(), "set the width of the frame")(
-      "height", po::value<int>(), "set the height of the frame")(
+      "width", po::value<unsigned int>(), "set the width of the frame")(
+      "height", po::value<unsigned int>(), "set the height of the frame")(
       "display,d", po::value<bool>()->default_value(true),
       "display the segmented frames")(
       "output-path,o", po::value<std::string>(),
       "if set, save the video to the given path")(
       "jobs,j",
-      po::value<int>()->default_value(1)->implicit_value(
+      po::value<unsigned int>()->default_value(1)->implicit_value(
           std::thread::hardware_concurrency()),
       "set the number of threads to use")(
-      "fps,f", po::value<int>()->default_value(24), "set the FPS of the video");
+      "fps,f", po::value<unsigned int>()->default_value(24), "set the FPS of the video")(
+      "log-level,L", po::value<std::string>()->default_value("info"),
+      "set the logging level)");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -49,8 +51,20 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Set the logging level
+  std::string log_level = vm["log-level"].as<std::string>();
+  if (log_level != "trace" && log_level != "debug" && log_level != "info" &&
+      log_level != "warning" && log_level != "error" && log_level != "fatal") {
+    BOOST_LOG_TRIVIAL(error) << "Invalid logging level!";
+    BOOST_LOG_TRIVIAL(error)
+        << "Valid values are: trace, debug, info, warning, error, fatal";
+    return 1;
+  }
+
+  set_logging_level(log_level);
+
   // Check if the verbose flag is set
-  bool verbose = vm.count("verbose") > 0 || vm.count("log-file") > 0;
+  const bool verbose = vm.count("verbose") > 0 || vm.count("log-file") > 0;
   if (verbose) {
     auto log_file = vm.count("log-file") > 0
                         ? std::make_optional(vm["log-file"].as<std::string>())
@@ -61,13 +75,13 @@ int main(int argc, char **argv) {
   }
 
   // Determine the number of threads to use
-  int num_threads = vm["jobs"].as<int>();
+  unsigned int num_threads = vm["jobs"].as<unsigned int>();
   if (num_threads < 0) {
     BOOST_LOG_TRIVIAL(error) << "Invalid number of threads!";
     return 1;
   }
 
-  const int max_threads = std::thread::hardware_concurrency();
+  const unsigned int max_threads = std::thread::hardware_concurrency();
   if (num_threads == 0 || num_threads > max_threads) {
     num_threads = max_threads;
   }
@@ -77,24 +91,24 @@ int main(int argc, char **argv) {
   }
 
   // Start a timer to measure the execution time
-  auto start = std::chrono::high_resolution_clock::now();
+  const auto start = std::chrono::high_resolution_clock::now();
 
   // Read the frames from the dataset in color
-  const std::optional<int> width =
-      vm.count("width") > 0 ? std::make_optional(vm["width"].as<int>())
+  const std::optional<unsigned int> width =
+      vm.count("width") > 0 ? std::make_optional(vm["width"].as<unsigned int>())
                             : std::nullopt;
-  const std::optional<int> height =
-      vm.count("height") > 0 ? std::make_optional(vm["height"].as<int>())
+  const std::optional<unsigned int> height =
+      vm.count("height") > 0 ? std::make_optional(vm["height"].as<unsigned int>())
                              : std::nullopt;
 
   if (verbose) {
     BOOST_LOG_TRIVIAL(info) << "Loading dataset";
   }
 
-  frame_helper::frames_vector frames_vector =
+  const frame_helper::frames_vector& frames_vector =
       frame_helper::readFrames(argv[1], width, height);
-  frame_helper::frames colored_frames = frames_vector[0];
-  frame_helper::frames gray_frames = frames_vector[1];
+  const frame_helper::frames& colored_frames = frames_vector[0];
+  const frame_helper::frames& gray_frames = frames_vector[1];
 
   // log RAM usage and display it
   if (verbose) {
@@ -117,8 +131,8 @@ int main(int argc, char **argv) {
   }
 
   // Extract the first frame from the dataset as the background
-  cv::Mat colored_bg_frame = colored_frames[0];
-  cv::Mat gray_bg_frame = gray_frames[0];
+  const cv::Mat& colored_bg_frame = colored_frames[0];
+  const cv::Mat& gray_bg_frame = gray_frames[0];
   const int w = colored_bg_frame.cols;
   const int h = colored_bg_frame.rows;
 
@@ -128,15 +142,21 @@ int main(int argc, char **argv) {
   }
 
   // Extract the texture features from the background frame in grayscale
-  texture_helper::feature_vector bg_features = {};
-  for (int c = 0; c < w; c++) {
-    for (int r = 0; r < h; r++) {
-      bg_features.push_back(texture_helper::calculateLBP(gray_bg_frame, c, r));
+  texture_helper::feature_vector* bg_features = new texture_helper::feature_vector();
+  for (unsigned int c = 0; c < w; c++) {
+    for (unsigned int r = 0; r < h; r++) {
+      bg_features->push_back(texture_helper::calculateLBP(gray_bg_frame, c, r));
     }
   }
 
+  auto end = std::chrono::high_resolution_clock::now();
+
   if (verbose) {
-    BOOST_LOG_TRIVIAL(info) << "Background frame extracted";
+    BOOST_LOG_TRIVIAL(info)
+        << "Background frame extracted in "
+        << std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+               .count()
+        << "ms";
   }
 
   // Create a thread pool
@@ -150,7 +170,7 @@ int main(int argc, char **argv) {
 
     boost::asio::post(pool, [i, bg_features, colored_bg_frame, colored_frames,
                              gray_frames, w, h, verbose, result] {
-      segmentation_helper::segment_frame(i, bg_features, colored_bg_frame,
+      segmentation_helper::segment_frame(i, *bg_features, colored_bg_frame,
                                          colored_frames, gray_frames, w, h,
                                          verbose, std::ref(*result));
     });
@@ -161,10 +181,9 @@ int main(int argc, char **argv) {
   // Wait for all threads to finish
   pool.join();
 
-  auto end = std::chrono::high_resolution_clock::now();
-
   if (verbose) {
-    auto total_duration =
+    end = std::chrono::high_resolution_clock::now();
+    const auto total_duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
             .count();
 
@@ -175,7 +194,7 @@ int main(int argc, char **argv) {
   // Save the segmented frames to a video file
   if (vm.count("output-path")) {
     std::string output_path = vm["output-path"].as<std::string>();
-    int fps = vm["fps"].as<int>();
+    const unsigned int fps = vm["fps"].as<unsigned int>();
 
     if (verbose) {
       BOOST_LOG_TRIVIAL(info)

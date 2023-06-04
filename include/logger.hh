@@ -7,6 +7,7 @@
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <optional>
+#include <string>
 
 namespace logging = boost::log;
 namespace keywords = boost::log::keywords;
@@ -21,7 +22,8 @@ namespace trivial = boost::log::trivial;
  * @param verbose Whether to enable verbose logging to the console
  * @param log_file The path to the log file
  */
-void init_logging(bool verbose, std::optional<std::string> log_file) {
+void init_logging(const bool verbose,
+                  const std::optional<std::string> &log_file) {
   // Set up the logger for the console
   if (verbose) {
     logging::add_console_log(
@@ -48,6 +50,29 @@ void init_logging(bool verbose, std::optional<std::string> log_file) {
  * Change the logging level
  * @param level The logging level
  */
-void set_logging_level(trivial::severity_level level) {
-  logging::core::get()->set_filter(logging::trivial::severity >= level);
+void set_logging_level(const std::string& level) {
+  trivial::severity_level l = trivial::info;
+
+  switch (level[0]) {
+  case 't':
+    l = trivial::trace;
+    break;
+  case 'd':
+    l = trivial::debug;
+    break;
+  case 'i':
+    l = trivial::info;
+    break;
+  case 'w':
+    l = trivial::warning;
+    break;
+  case 'e':
+    l = trivial::error;
+    break;
+  case 'f':
+    l = trivial::fatal;
+    break;
+  }
+
+  logging::core::get()->set_filter(logging::trivial::severity >= l);
 }
