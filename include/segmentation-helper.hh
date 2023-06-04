@@ -18,14 +18,17 @@ const double THRESHOLD = 0.67;
  * @param features The texture features of the current frame
  * @return The values of the segments between 0 and 1, where 0 is the background
  */
-const layer_vector &
+const cv::Mat &
 segment(const color_helper::similarity_vectors &color_similarities,
         const texture_helper::feature_vector &bg_features,
-        const texture_helper::feature_vector &features) {
+        const texture_helper::feature_vector &features, const unsigned int w,
+        const unsigned int h) {
   layer_vector *segments = new layer_vector();
 
   // Define the factors for the color and texture similarities
   std::vector<double> factors = {0.1, 0.3, 0.6};
+
+  cv::Mat *frame = new cv::Mat(h, w, CV_8UC1);
 
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
@@ -50,9 +53,11 @@ segment(const color_helper::similarity_vectors &color_similarities,
 
     // If the similarity is greater than 0.67, it is the foreground
     segments->push_back(similarity >= THRESHOLD ? 0 : 1);
+
+    frame_helper::buildSegmentedFrame(*frame, i, *segments, w, h);
   }
 
-  return *segments;
+  return *frame;
 }
 
 /**
@@ -72,8 +77,9 @@ void segment_frame(const int i,
                    const texture_helper::feature_vector &bg_features,
                    const cv::Mat &colored_bg_frame,
                    const frame_helper::frames &colored_frames,
-                   const frame_helper::frames &gray_frames, const int w,
-                   const int h, const bool verbose, cv::Mat &result) {
+                   const frame_helper::frames &gray_frames,
+                   const unsigned int w, const unsigned int h,
+                   const bool verbose, cv::Mat &result) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -111,9 +117,8 @@ void segment_frame(const int i,
 
   // Segment the current frame based on the color and texture similarities with
   // the background frame
-  const segmentation_helper::layer_vector& segments =  
-      segmentation_helper::segment(*color_similarities, bg_features, *features);
-  const cv::Mat& segmented_frame = frame_helper::buildSegmentedFrame(segments, w, h);
+  const cv::Mat &segmented_frame = segmentation_helper::segment(
+      *color_similarities, bg_features, *features, w, h);
 
   // Log the duration of the segmentation
   if (verbose) {

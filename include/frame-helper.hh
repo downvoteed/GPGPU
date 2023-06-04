@@ -52,16 +52,14 @@ void showFrame(const std::string &name, const cv::Mat &frame) {
  * @param height The height of the frame
  * @return The segmented frame
  */
-const cv::Mat &buildSegmentedFrame(const std::vector<uint8_t> &segments,
+const cv::Mat &buildSegmentedFrame(cv::Mat &frame, const unsigned int i,
+                                   const std::vector<uint8_t> &segments,
                                    const int width, const int height) {
-  cv::Mat *frame = new cv::Mat(height, width, CV_8UC1);
-  for (unsigned long i = 0; i < segments.size(); i++) {
-    int c = i % width;
-    int r = i / width;
-    frame->at<uint8_t>(r, c) = segments[i] * 255;
-  }
+  int c = i % width;
+  int r = i / width;
+  frame.at<uint8_t>(r, c) = segments[i] * 255;
 
-  return *frame;
+  return frame;
 }
 
 /**
@@ -126,7 +124,8 @@ readFrames(const std::string &path,
  * @param frames The frames to save
  * @param fps The number of frames per second
  */
-void saveFrames(const std::string &path, frames_ref &frames, const int fps = 24) {
+void saveFrames(const std::string &path, frames_ref &frames,
+                const int fps = 24) {
   cv::Size frameSize(frames[0]->cols, frames[0]->rows);
   cv::VideoWriter video(path, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), fps,
                         frameSize);
