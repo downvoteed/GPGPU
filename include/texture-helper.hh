@@ -45,19 +45,11 @@ const uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
  * @param f2 The LBP features of the second frame
  * @return The similarity between the two frames
  */
-const double compare(const unsigned int i, const feature_vector &f1,
-                     const feature_vector &f2) {
-  // Calculate the number of identical bits
-  const uint8_t p1 = std::popcount(f1[i]);
-  const uint8_t p2 = std::popcount(f2[i]);
-  const double identical = (double)std::max(p1, p2);
-
-  // Calculate the total number of bits
-  const double total = 8;
-
-  // Calculate the similarity between the two LBP values as the ratio of
-  // identical bits to total bits
-  return identical / total;
+const uint8_t compare(const unsigned int i, const feature_vector &f1,
+                      const feature_vector &f2) {
+  // Calculate the number of identical bits using biwise and popcount
+  const uint8_t identical_bits = __builtin_popcount((~(f1[i] ^ f2[i])) & 0xFF);
+  return identical_bits / 8;
 }
 
 } // namespace texture_helper

@@ -6,8 +6,6 @@
 #include <vector>
 
 namespace segmentation_helper {
-using layer_vector = std::vector<uint8_t>;
-
 const double THRESHOLD = 0.67;
 
 /**
@@ -23,11 +21,6 @@ segment(const color_helper::similarity_vectors &color_similarities,
         const texture_helper::feature_vector &bg_features,
         const texture_helper::feature_vector &features, const unsigned int w,
         const unsigned int h) {
-  layer_vector *segments = new layer_vector();
-
-  // Define the factors for the color and texture similarities
-  std::vector<double> factors = {0.1, 0.3, 0.6};
-
   cv::Mat *frame = new cv::Mat(h, w, CV_8UC1);
 
   // Calculate the weighted sum of the color and texture similarities
@@ -37,24 +30,45 @@ segment(const color_helper::similarity_vectors &color_similarities,
 
     // Compare the texture features of the current frame with the background
     // frame
-    double t = texture_helper::compare(i, bg_features, features);
+    uint8_t t = texture_helper::compare(i, bg_features, features);
 
     // Sort the similarities in ascending order
-    std::vector<double> similarities = {r, g, t};
-    std::sort(similarities.begin(), similarities.end());
-
-    // Multiply the similarities with the factors
-    for (unsigned long j = 0; j < similarities.size(); j++) {
-      similarities[j] *= factors[j];
+    double s1, s2, s3;
+    if (r <= g && r <= t) {
+      s1 = r;
+      if (g <= t) {
+        s2 = g;
+        s3 = t;
+      } else {
+        s2 = t;
+        s3 = g;
+      }
+    } else if (g <= r && g <= t) {
+      s1 = g;
+      if (r <= t) {
+        s2 = r;
+        s3 = t;
+      } else {
+        s2 = t;
+        s3 = r;
+      }
+    } else {
+      s1 = t;
+      if (r <= g) {
+        s2 = r;
+        s3 = g;
+      } else {
+        s2 = g;
+        s3 = r;
+      }
     }
 
     // Calculate the weighted sum of the similarities and threshold it
-    double similarity = similarities[0] + similarities[1] + similarities[2];
+    double similarity = s1 * 0.1 + s2 * 0.3 + s3 * 0.6;
 
     // If the similarity is greater than 0.67, it is the foreground
-    segments->push_back(similarity >= THRESHOLD ? 0 : 1);
-
-    frame_helper::buildSegmentedFrame(*frame, i, *segments, w, h);
+    frame_helper::buildSegmentedFrame(*frame, i,
+                                      similarity >= THRESHOLD ? 0 : 1, w);
   }
 
   return *frame;
@@ -103,15 +117,18 @@ void segment_frame(const int i,
 
   for (int c = 0; c < w; c++) {
     for (int r = 0; r < h; r++) {
-      // Compare the color components of the current frame with the background
-      // frame
-      color_helper::similarity_vector color_similarity_vector =
+      // Compare the color components of the current frame with the
+      // background frame
+      const color_helper::similarity_vector *color_similarity_vector =
           color_helper::compare(colored_bg_frame, curr_colored_frame, c, r);
-      (*color_similarities)[0][r * w + c] = color_similarity_vector[0];
-      (*color_similarities)[1][r * w + c] = color_similarity_vector[1];
+      (*color_similarities)[0][r * w + c] = color_similarity_vector->at(0);
+      (*color_similarities)[1][r * w + c] = color_similarity_vector->at(1);
 
       // Extract the texture features from the current frame
       features->push_back(texture_helper::calculateLBP(curr_gray_frame, c, r));
+
+      // Free the memory
+      delete color_similarity_vector;
     }
   }
 
@@ -130,6 +147,10 @@ void segment_frame(const int i,
     BOOST_LOG_TRIVIAL(info) << "Frame " << i << "/" << colored_frames.size()
                             << " segmented in " << duration << "ms";
   }
+
+  // Free the memory
+  delete color_similarities;
+  delete features;
 
   // Save the segmented frame
   result = segmented_frame;

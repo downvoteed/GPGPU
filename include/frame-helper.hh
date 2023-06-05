@@ -47,17 +47,15 @@ void showFrame(const std::string &name, const cv::Mat &frame) {
 /**
  * Build a segmented frame from a vector of boolean values
  * (foreground/background)
- * @param segments The vector of boolean values (1 or 0)
+ * @param value 0 for foreground, 1 for background
  * @param width The width of the frame
- * @param height The height of the frame
  * @return The segmented frame
  */
 const cv::Mat &buildSegmentedFrame(cv::Mat &frame, const unsigned int i,
-                                   const std::vector<uint8_t> &segments,
-                                   const int width, const int height) {
+                                   const uint8_t value, const int width) {
   int c = i % width;
   int r = i / width;
-  frame.at<uint8_t>(r, c) = segments[i] * 255;
+  frame.at<uint8_t>(r, c) = value * 255;
 
   return frame;
 }
@@ -69,7 +67,7 @@ const cv::Mat &buildSegmentedFrame(cv::Mat &frame, const unsigned int i,
  * @param height The height of the frames (optional)
  * @return The frames
  */
-const frames_vector &
+const frames_vector *
 readFrames(const std::string &path,
            const std::optional<int> &width = std::nullopt,
            const std::optional<int> &height = std::nullopt) {
@@ -115,7 +113,7 @@ readFrames(const std::string &path,
   frames_vector *frames = new frames_vector();
   frames->push_back(colored_frames);
   frames->push_back(gray_frames);
-  return *frames;
+  return frames;
 }
 
 /**

@@ -31,7 +31,8 @@ int main(int argc, char **argv) {
       po::value<unsigned int>()->default_value(1)->implicit_value(
           std::thread::hardware_concurrency()),
       "set the number of threads to use")(
-      "fps,f", po::value<unsigned int>()->default_value(24), "set the FPS of the video")(
+      "fps,f", po::value<unsigned int>()->default_value(24),
+      "set the FPS of the video")(
       "log-level,L", po::value<std::string>()->default_value("info"),
       "set the logging level)");
 
@@ -98,17 +99,18 @@ int main(int argc, char **argv) {
       vm.count("width") > 0 ? std::make_optional(vm["width"].as<unsigned int>())
                             : std::nullopt;
   const std::optional<unsigned int> height =
-      vm.count("height") > 0 ? std::make_optional(vm["height"].as<unsigned int>())
-                             : std::nullopt;
+      vm.count("height") > 0
+          ? std::make_optional(vm["height"].as<unsigned int>())
+          : std::nullopt;
 
   if (verbose) {
     BOOST_LOG_TRIVIAL(info) << "Loading dataset";
   }
 
-  const frame_helper::frames_vector& frames_vector =
+  const frame_helper::frames_vector *frames_vector =
       frame_helper::readFrames(argv[1], width, height);
-  const frame_helper::frames& colored_frames = frames_vector[0];
-  const frame_helper::frames& gray_frames = frames_vector[1];
+  const frame_helper::frames &colored_frames = frames_vector->at(0);
+  const frame_helper::frames &gray_frames = frames_vector->at(1);
 
   // log RAM usage and display it
   if (verbose) {
@@ -131,8 +133,8 @@ int main(int argc, char **argv) {
   }
 
   // Extract the first frame from the dataset as the background
-  const cv::Mat& colored_bg_frame = colored_frames[0];
-  const cv::Mat& gray_bg_frame = gray_frames[0];
+  const cv::Mat &colored_bg_frame = colored_frames[0];
+  const cv::Mat &gray_bg_frame = gray_frames[0];
   const int w = colored_bg_frame.cols;
   const int h = colored_bg_frame.rows;
 
@@ -142,7 +144,8 @@ int main(int argc, char **argv) {
   }
 
   // Extract the texture features from the background frame in grayscale
-  texture_helper::feature_vector* bg_features = new texture_helper::feature_vector();
+  texture_helper::feature_vector *bg_features =
+      new texture_helper::feature_vector();
   for (unsigned int c = 0; c < w; c++) {
     for (unsigned int r = 0; r < h; r++) {
       bg_features->push_back(texture_helper::calculateLBP(gray_bg_frame, c, r));
@@ -216,6 +219,13 @@ int main(int argc, char **argv) {
                                   std::to_string(segmented_frames.size()),
                               *(segmented_frames[i]));
     }
+  }
+
+  // Free the memory
+  delete frames_vector;
+  delete bg_features;
+  for (unsigned long i = 0; i < segmented_frames.size(); i++) {
+    delete segmented_frames[i];
   }
 
   return 0;
