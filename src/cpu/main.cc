@@ -81,10 +81,6 @@ int main(int argc, char **argv) {
 
   // Determine the number of threads to use
   unsigned int num_threads = vm["jobs"].as<unsigned int>();
-  if (num_threads < 0) {
-    BOOST_LOG_TRIVIAL(error) << "Invalid number of threads!";
-    return 1;
-  }
 
   const unsigned int max_threads = std::thread::hardware_concurrency();
   if (num_threads == 0 || num_threads > max_threads) {

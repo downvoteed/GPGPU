@@ -15,11 +15,11 @@ using feature_vector = std::vector<uint8_t>;
  * @return The pixel value
  */
 uint8_t getPixel(const cv::Mat &frame, const int c, const int r) {
-  try {
-    return frame.at<uint8_t>(r, c);
-  } catch (const std::exception &e) {
+  if (c < 0 || c >= frame.cols || r < 0 || r >= frame.rows) {
     return 0;
   }
+
+  return frame.at<uint8_t>(r, c);
 }
 
 /**

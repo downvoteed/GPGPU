@@ -29,7 +29,6 @@ else()
     message(STATUS "Found OpenCV in the system")
 endif()
 
-
 if(POLICY CMP0079)
   cmake_policy(SET CMP0079 NEW)
 endif()
@@ -50,13 +49,11 @@ include_directories(include)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
 set (CMAKE_CXX_FLAGS "-Ofast")
 if(NOT MVSC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -pedantic")
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 endif()
-    
 
 subdirs(src)
