@@ -16,11 +16,10 @@ const float THRESHOLD = 0.67;
  * @param features The texture features of the current frame
  * @return The values of the segments between 0 and 1, where 0 is the background
  */
-const cv::Mat &
-segment(const color_helper::similarity_vectors &color_similarities,
-        const texture_helper::feature_vector &bg_features,
-        const texture_helper::feature_vector &features, const unsigned int w,
-        const unsigned int h) {
+void segment(const color_helper::similarity_vectors &color_similarities,
+             const texture_helper::feature_vector &bg_features,
+             const texture_helper::feature_vector &features,
+             const unsigned int w, const unsigned int h, cv::Mat &result) {
   cv::Mat *frame = new cv::Mat(h, w, CV_8UC1);
 
   // Calculate the weighted sum of the color and texture similarities
@@ -71,7 +70,8 @@ segment(const color_helper::similarity_vectors &color_similarities,
                                       similarity >= THRESHOLD ? 0 : 1, w);
   }
 
-  return *frame;
+  // Save the segmented frame
+  result = *frame;
 }
 
 /**
@@ -129,8 +129,8 @@ void segment_frame(const int i, const unsigned int size,
 
   // Segment the current frame based on the color and texture similarities with
   // the background frame
-  const cv::Mat &segmented_frame = segmentation_helper::segment(
-      *color_similarities, bg_features, *features, w, h);
+  segmentation_helper::segment(*color_similarities, bg_features, *features, w,
+                               h, result);
 
   // Log the duration of the segmentation
   if (verbose) {
@@ -146,9 +146,6 @@ void segment_frame(const int i, const unsigned int size,
   // Free the memory
   delete color_similarities;
   delete features;
-
-  // Save the segmented frame
-  result = segmented_frame;
 }
 
 } // namespace segmentation_helper
