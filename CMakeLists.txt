@@ -25,7 +25,6 @@ if(NOT OpenCV_FOUND)
     set(BUILD_opencv_dnn OFF CACHE BOOL "" FORCE)  # disable building of DNN module
 
     FetchContent_MakeAvailable(opencv)
-
 else()
     message(STATUS "Found OpenCV in the system")
 endif()
@@ -45,13 +44,15 @@ find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options log thread)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIR})
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(include)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(MVSC)
+
+set (CMAKE_CXX_FLAGS "-Ofast")
+if(NOT MVSC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -pedantic")
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")

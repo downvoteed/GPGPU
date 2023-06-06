@@ -7,7 +7,7 @@
 namespace color_helper {
 
 using color_components = std::vector<uint8_t>;
-using similarity_vector = std::vector<double>;
+using similarity_vector = std::vector<float>;
 using similarity_vectors = std::vector<similarity_vector>;
 
 /**
@@ -49,16 +49,16 @@ const similarity_vector *compare(const cv::Mat &frame1, const cv::Mat &frame2,
 
   // Calculate the color similarities for each color component
   uint8_t r1 = c1->at(0);
-  uint8_t r2 = c2->at(1);
-  uint8_t r_max = std::max(r1, r2);
-  uint8_t r_min = std::min(r1, r2);
-  similarities->push_back((double)r_min / (double)r_max);
+  uint8_t r2 = c2->at(0);
+  float r_max = std::max(r1, r2);
+  float r_min = std::min(r1, r2);
+  similarities->push_back(r_min / r_max);
 
-  uint8_t g1 = c1->at(0);
+  uint8_t g1 = c1->at(1);
   uint8_t g2 = c2->at(1);
-  uint8_t g_max = std::max(g1, g2);
-  uint8_t g_min = std::min(g1, g2);
-  similarities->push_back((double)g_min / (double)g_max);
+  float g_max = std::max(g1, g2);
+  float g_min = std::min(g1, g2);
+  similarities->push_back(g_min / g_max);
 
   // Free the memory
   delete c1;

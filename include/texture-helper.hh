@@ -14,26 +14,18 @@ using feature_vector = std::vector<uint8_t>;
  * @param r The r coordinate of the pixel
  * @return The LBP value of the pixel
  */
-const uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
+uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
   uint8_t lbp = 0;
   uint8_t center = frame.at<uint8_t>(r, c);
 
-  // Define the relative positions of the 8 neighbors
-  const int neighbors[8][2] = {{-1, -1}, {0, -1}, {1, -1}, {-1, 0},
-                               {1, 0},   {-1, 1}, {0, 1},  {1, 1}};
-
-  // Compare the intensity value of the center pixel with its neighbors
-  for (int i = 0; i < 8; i++) {
-    const int nc = c + neighbors[i][0];
-    const int nr = r + neighbors[i][1];
-
-    // Check if the neighbor coordinates are within the image boundaries
-    if (nc >= 0 && nc < frame.cols && nr >= 0 && nr < frame.rows) {
-      // If the neighbor is less than the center, set the bit to 1
-      const uint8_t neighbor = frame.at<uint8_t>(nr, nc);
-      lbp |= (neighbor < center) << i;
-    }
-  }
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r - 1, c - 1) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r - 1, c) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r - 1, c + 1) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r, c - 1) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r, c + 1) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r + 1, c - 1) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r + 1, c) < center);
+  lbp = (lbp << 1) | (frame.at<uint8_t>(r + 1, c + 1) < center);
 
   return lbp;
 }
@@ -45,11 +37,11 @@ const uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
  * @param f2 The LBP features of the second frame
  * @return The similarity between the two frames
  */
-const uint8_t compare(const unsigned int i, const feature_vector &f1,
+float compare(const unsigned int i, const feature_vector &f1,
                       const feature_vector &f2) {
   // Calculate the number of identical bits using biwise and popcount
-  const uint8_t identical_bits = __builtin_popcount((~(f1[i] ^ f2[i])) & 0xFF);
-  return identical_bits / 8;
+  const uint8_t vector = ~(f1[i] ^ f2[i]);
+  return __builtin_popcount(vector) / 8.0f;
 }
 
 } // namespace texture_helper

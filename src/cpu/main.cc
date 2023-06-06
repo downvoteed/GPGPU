@@ -135,8 +135,8 @@ int main(int argc, char **argv) {
   // Extract the first frame from the dataset as the background
   const cv::Mat &colored_bg_frame = colored_frames[0];
   const cv::Mat &gray_bg_frame = gray_frames[0];
-  const int w = colored_bg_frame.cols;
-  const int h = colored_bg_frame.rows;
+  const unsigned int w = colored_bg_frame.cols;
+  const unsigned int h = colored_bg_frame.rows;
 
   if (verbose) {
     BOOST_LOG_TRIVIAL(info) << "- Frame size: " << w << "x" << h;
