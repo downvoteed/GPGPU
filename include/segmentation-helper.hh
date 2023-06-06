@@ -87,26 +87,21 @@ segment(const color_helper::similarity_vectors &color_similarities,
  * @param verbose Whether to display the progress
  * @param result The segmented frame
  */
-void segment_frame(const int i,
+void segment_frame(const int i, const unsigned int size,
                    const texture_helper::feature_vector &bg_features,
                    const cv::Mat &colored_bg_frame,
-                   const frame_helper::frames &colored_frames,
-                   const frame_helper::frames &gray_frames,
+                   const cv::Mat &colored_frame, const cv::Mat &gray_frame,
                    const unsigned int w, const unsigned int h,
                    const bool verbose, cv::Mat &result) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
   if (verbose) {
-    const int progress = (int)(((float)i) / (float)colored_frames.size() * 100);
+    const int progress = (int)(((float)i) / (float)size * 100);
 
     BOOST_LOG_TRIVIAL(info)
-        << "Processing frame: " << i << "/" << colored_frames.size() << " ("
-        << progress << "%)";
+        << "Processing frame: " << i << "/" << size << " (" << progress << "%)";
   }
-
-  const cv::Mat &curr_colored_frame = colored_frames[i];
-  const cv::Mat &curr_gray_frame = gray_frames[i];
 
   color_helper::similarity_vectors *color_similarities =
       new color_helper::similarity_vectors{
@@ -120,12 +115,12 @@ void segment_frame(const int i,
       // Compare the color components of the current frame with the
       // background frame
       const color_helper::similarity_vector *color_similarity_vector =
-          color_helper::compare(colored_bg_frame, curr_colored_frame, c, r);
+          color_helper::compare(colored_bg_frame, colored_frame, c, r);
       (*color_similarities)[0][r * w + c] = color_similarity_vector->at(0);
       (*color_similarities)[1][r * w + c] = color_similarity_vector->at(1);
 
       // Extract the texture features from the current frame
-      features->push_back(texture_helper::calculateLBP(curr_gray_frame, c, r));
+      features->push_back(texture_helper::calculateLBP(gray_frame, c, r));
 
       // Free the memory
       delete color_similarity_vector;
@@ -144,8 +139,8 @@ void segment_frame(const int i,
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
             .count();
 
-    BOOST_LOG_TRIVIAL(info) << "Frame " << i << "/" << colored_frames.size()
-                            << " segmented in " << duration << "ms";
+    BOOST_LOG_TRIVIAL(info)
+        << "Frame " << i << "/" << size << " segmented in " << duration << "ms";
   }
 
   // Free the memory
