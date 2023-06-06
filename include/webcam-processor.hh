@@ -73,7 +73,7 @@ void process_webcam(const bool verbose) {
     }
 
     // Segment the frame
-    cv::Mat *result = new cv::Mat();
+    cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
     segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
                                        frame, gray_frame, w, h, false,
                                        std::ref(*result));

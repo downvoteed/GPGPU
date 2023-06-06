@@ -77,7 +77,7 @@ void process_video(const bool verbose, const std::string &video_path,
   frame_helper::frames_ref segmented_frames = {};
   for (unsigned long i = 1; i < colored_frames.size(); i++) {
     // Create a new frame to store the result
-    cv::Mat *result = new cv::Mat();
+    cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
 
     // Add a task to the thread pool
     boost::asio::post(pool, [i, bg_features, colored_bg_frame, colored_frames,

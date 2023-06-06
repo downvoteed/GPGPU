@@ -19,9 +19,7 @@ const float THRESHOLD = 0.67;
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
              const texture_helper::feature_vector &features,
-             const unsigned int w, const unsigned int h, cv::Mat &result) {
-  cv::Mat *frame = new cv::Mat(h, w, CV_8UC1);
-
+             const unsigned int w, cv::Mat &result) {
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
     float r = color_similarities[0][i];
@@ -66,12 +64,9 @@ void segment(const color_helper::similarity_vectors &color_similarities,
     const float similarity = s1 * 0.1 + s2 * 0.3 + s3 * 0.6;
 
     // If the similarity is greater than 0.67, it is the foreground
-    frame_helper::buildSegmentedFrame(*frame, i,
+    frame_helper::buildSegmentedFrame(result, i,
                                       similarity >= THRESHOLD ? 0 : 1, w);
   }
-
-  // Save the segmented frame
-  result = *frame;
 }
 
 /**
@@ -130,7 +125,7 @@ void segment_frame(const int i, const unsigned int size,
   // Segment the current frame based on the color and texture similarities with
   // the background frame
   segmentation_helper::segment(*color_similarities, bg_features, *features, w,
-                               h, result);
+                               result);
 
   // Log the duration of the segmentation
   if (verbose) {
