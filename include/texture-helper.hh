@@ -8,6 +8,21 @@ namespace texture_helper {
 using feature_vector = std::vector<uint8_t>;
 
 /**
+ * Get the pixel value of a frame
+ * @param frame The OpenCV frame
+ * @param c The c coordinate of the pixel
+ * @param r The r coordinate of the pixel
+ * @return The pixel value
+ */
+uint8_t getPixel(const cv::Mat &frame, const int c, const int r) {
+  try {
+    return frame.at<uint8_t>(r, c);
+  } catch (const std::exception &e) {
+    return 0;
+  }
+}
+
+/**
  * Calculate the LBP value of a pixel in a frame
  * @param frame The OpenCV frame
  * @param c The c coordinate of the pixel
@@ -18,14 +33,14 @@ uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
   uint8_t lbp = 0;
   uint8_t center = frame.at<uint8_t>(r, c);
 
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r - 1, c - 1) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r - 1, c) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r - 1, c + 1) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r, c - 1) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r, c + 1) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r + 1, c - 1) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r + 1, c) < center);
-  lbp = (lbp << 1) | (frame.at<uint8_t>(r + 1, c + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r - 1, c - 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r - 1, c) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r - 1, c + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r, c - 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r, c + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r + 1, c - 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r + 1, c) < center);
+  lbp = (lbp << 1) | (getPixel(frame, r + 1, c + 1) < center);
 
   return lbp;
 }
@@ -38,7 +53,7 @@ uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
  * @return The similarity between the two frames
  */
 float compare(const unsigned int i, const feature_vector &f1,
-                      const feature_vector &f2) {
+              const feature_vector &f2) {
   // Calculate the number of identical bits using biwise and popcount
   const uint8_t vector = ~(f1[i] ^ f2[i]);
   return __builtin_popcount(vector) / 8.0f;
