@@ -7,6 +7,23 @@
 
 namespace segmentation_helper {
 const float THRESHOLD = 0.67;
+const float ALPHA = 0.1;
+
+void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
+                     const unsigned int w, const unsigned int i) {
+  // Update the background model
+  const unsigned int c = i % w;
+  const unsigned int r = i / w;
+
+  cv::Vec3b pixel = colored_frame.at<cv::Vec3b>(r, c);
+  cv::Vec3b bg_pixel = colored_bg_frame->at<cv::Vec3b>(r, c);
+
+  bg_pixel[0] = ALPHA * pixel[0] + (1 - ALPHA) * bg_pixel[0];
+  bg_pixel[1] = ALPHA * pixel[1] + (1 - ALPHA) * bg_pixel[1];
+  bg_pixel[2] = ALPHA * pixel[2] + (1 - ALPHA) * bg_pixel[2];
+
+  colored_bg_frame->at<cv::Vec3b>(r, c) = bg_pixel;
+}
 
 /**
  * Segment a frame into foreground and background
@@ -19,7 +36,9 @@ const float THRESHOLD = 0.67;
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
              const texture_helper::feature_vector &features,
-             const unsigned int w, cv::Mat &result) {
+             const unsigned int w, cv::Mat &result,
+             const bool should_extract_bg, cv::Mat *colored_bg_frame,
+             const cv::Mat &colored_frame) {
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
     float r = color_similarities[0][i];
@@ -64,8 +83,15 @@ void segment(const color_helper::similarity_vectors &color_similarities,
     const float similarity = s1 * 0.1 + s2 * 0.3 + s3 * 0.6;
 
     // If the similarity is greater than 0.67, it is the foreground
-    frame_helper::buildSegmentedFrame(result, i,
-                                      similarity >= THRESHOLD ? 0 : 1, w);
+    const uint8_t value = similarity >= THRESHOLD ? 0 : 1;
+
+    // Background model optimization
+    if (should_extract_bg && value == 1) {
+      bg_optimization(colored_bg_frame, colored_frame, w, i);
+    }
+
+    // Build the segmented frame
+    frame_helper::buildSegmentedFrame(result, i, value, w);
   }
 }
 
@@ -84,10 +110,10 @@ void segment(const color_helper::similarity_vectors &color_similarities,
  */
 void segment_frame(const int i, const unsigned int size,
                    const texture_helper::feature_vector &bg_features,
-                   const cv::Mat &colored_bg_frame,
-                   const cv::Mat &colored_frame, const cv::Mat &gray_frame,
-                   const unsigned int w, const unsigned int h,
-                   const bool verbose, cv::Mat &result) {
+                   cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
+                   const cv::Mat &gray_frame, const unsigned int w,
+                   const unsigned int h, const bool verbose, cv::Mat &result,
+                   const bool should_extract_bg) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -112,7 +138,7 @@ void segment_frame(const int i, const unsigned int size,
 
       // Compare the color components of the current frame with the
       // background frame
-      color_helper::compare(colored_bg_frame, colored_frame, c, r, r_ratio,
+      color_helper::compare(*colored_bg_frame, colored_frame, c, r, r_ratio,
                             g_ratio);
       (*color_similarities)[0][r * w + c] = r_ratio;
       (*color_similarities)[1][r * w + c] = g_ratio;
@@ -125,7 +151,8 @@ void segment_frame(const int i, const unsigned int size,
   // Segment the current frame based on the color and texture similarities with
   // the background frame
   segmentation_helper::segment(*color_similarities, bg_features, *features, w,
-                               result);
+                               result, should_extract_bg, colored_bg_frame,
+                               colored_frame);
 
   // Log the duration of the segmentation
   if (verbose) {
