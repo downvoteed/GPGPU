@@ -146,8 +146,7 @@ void segment_frame(const int i, const unsigned int size,
                    cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                    const cv::Mat &gray_frame, const unsigned int w,
                    const unsigned int h, const bool verbose, cv::Mat &result,
-                   const bool should_extract_bg,
-                   boost::asio::thread_pool *pool) {
+                   const bool should_extract_bg) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -172,18 +171,22 @@ void segment_frame(const int i, const unsigned int size,
   const unsigned int block_size =
       std::ceil((float)h / (float)available_threads);
 
+  boost::asio::thread_pool pool2(available_threads);
+
   // Segment the frame in blocks
   for (unsigned int j = 0; j < available_threads; j++) {
     const unsigned int min_r = j * block_size;
     const unsigned int max_r = std::min((j + 1) * block_size, h);
-    boost::asio::post(*pool, [min_r, max_r, color_similarities, features,
-                              colored_bg_frame, colored_frame, gray_frame, w] {
-      segment_block(0, w, min_r, max_r, color_similarities, features,
-                    colored_bg_frame, colored_frame, gray_frame, w);
-    });
+    // boost::asio::post(pool2, [min_r, max_r, color_similarities, features,
+    //                           colored_bg_frame, colored_frame, gray_frame,
+    //                           w]() {
+    segment_block(0, w, min_r, max_r, color_similarities, features,
+                  colored_bg_frame, colored_frame, gray_frame, w);
+    // });
   }
 
-  pool->join();
+  // Wait for all threads to finish
+  // pool2.join();
 
   // Segment the current frame based on the color and texture similarities with
   // the background frame

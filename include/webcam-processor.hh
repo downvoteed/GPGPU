@@ -12,7 +12,7 @@
  * @param verbose Whether to display the log messages
  * @param pool The thread pool
  */
-void process_webcam(const bool verbose, boost::asio::thread_pool *pool) {
+void process_webcam(const bool verbose) {
   // Open the webcam
   cv::VideoCapture webcam(0);
   if (!webcam.isOpened()) {
@@ -94,9 +94,9 @@ void process_webcam(const bool verbose, boost::asio::thread_pool *pool) {
 
     // Segment the frame
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
-    segmentation_helper::segment_frame(
-        0, 0, *bg_features, colored_bg_frame, frame, gray_frame, w, h, false,
-        std::ref(*result), should_extract_bg, pool);
+    segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
+                                       frame, gray_frame, w, h, false,
+                                       std::ref(*result), should_extract_bg);
 
     // Display the frame
     cv::imshow("Webcam", *result);

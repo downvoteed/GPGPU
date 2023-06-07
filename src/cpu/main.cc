@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
   }
 
   // Create the thread pool
-  boost::asio::thread_pool *pool = new boost::asio::thread_pool(num_threads);
+  boost::asio::thread_pool pool(num_threads);
 
   // If an input path is provided, process the video
   if (vm.count("input")) {
@@ -124,11 +124,8 @@ int main(int argc, char **argv) {
 
   // If the webcam flag is set, process the webcam stream
   if (vm.count("webcam")) {
-    process_webcam(verbose, pool);
+    process_webcam(verbose);
   }
-
-  // Free the memory
-  delete pool;
 
   return 0;
 }

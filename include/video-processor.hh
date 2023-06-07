@@ -25,7 +25,7 @@ void process_video(const bool verbose, const std::string &video_path,
                    const std::optional<std::string> output_path,
                    const bool display, const unsigned int fps,
                    const bool should_extract_bg,
-                   boost::asio::thread_pool *pool) {
+                   boost::asio::thread_pool &pool) {
   // Start a timer to measure the execution time
   const auto start = std::chrono::high_resolution_clock::now();
 
@@ -95,13 +95,13 @@ void process_video(const bool verbose, const std::string &video_path,
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
 
     // Add a task to the thread pool
-    boost::asio::post(*pool, [i, bg_features, colored_bg_frame, colored_frames,
-                              gray_frames, w, h, verbose, result,
-                              should_extract_bg]() {
-      segmentation_helper::segment_frame(
-          i, colored_frames.size(), *bg_features, colored_bg_frame,
-          colored_frames[i], gray_frames[i], w, h, verbose, std::ref(*result),
-          should_extract_bg, nullptr);
+    boost::asio::post(pool, [i, bg_features, colored_bg_frame, colored_frames,
+                             gray_frames, w, h, verbose, result,
+                             should_extract_bg]() {
+      segmentation_helper::segment_frame(i, colored_frames.size(), *bg_features,
+                                         colored_bg_frame, colored_frames[i],
+                                         gray_frames[i], w, h, verbose,
+                                         std::ref(*result), should_extract_bg);
 
       // Update the background features
       if (should_extract_bg) {
@@ -129,7 +129,7 @@ void process_video(const bool verbose, const std::string &video_path,
   }
 
   // Wait for all threads to finish
-  pool->join();
+  pool.join();
 
   if (verbose) {
     end = std::chrono::high_resolution_clock::now();
