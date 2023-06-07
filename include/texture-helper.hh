@@ -56,6 +56,7 @@ float compare(const unsigned int i, const feature_vector &f1,
               const feature_vector &f2) {
   // Calculate the number of identical bits using biwise and popcount
   const uint8_t vector = ~(f1[i] ^ f2[i]);
+
 #ifdef WIN32
   return static_cast<float>(__popcnt(vector)) / 8.0f;
 #else

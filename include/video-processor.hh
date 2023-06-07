@@ -14,9 +14,10 @@
  * @param width The width of the frames
  * @param height The height of the frames
  * @param output_path The path to the output video file
+ * @param num_threads The number of threads to use
  * @param display Whether to display the segmented frames
  * @param fps The FPS of the output video file
- * @param should_extract_bg Whether to extract the background frame
+ * @param alpha The alpha value for the background optimizer
  */
 void process_video(const bool verbose, const std::string &video_path,
                    const std::optional<unsigned int> width,

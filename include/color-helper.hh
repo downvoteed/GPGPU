@@ -34,7 +34,6 @@ void convert(const cv::Mat &frame, const int c, const int r,
  * @param r The r coordinate
  * @param r_ratio The R color similarity
  * @param g_ratio The G color similarity
- * @return The color similarities
  */
 void compare(const cv::Mat &frame1, const cv::Mat &frame2, const int c,
              const int r, float &r_ratio, float &g_ratio) {

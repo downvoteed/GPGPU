@@ -16,6 +16,7 @@ const float THRESHOLD = 0.67;
  * @param colored_frame The current frame in color
  * @param w The width of the frame
  * @param i The index of the current pixel
+ * @param alpha The alpha value for the background optimizer
  */
 void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                      const unsigned int w, const unsigned int i,
@@ -40,7 +41,11 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
  * and the background frame
  * @param bg_features The texture features of the background frame
  * @param features The texture features of the current frame
- * @return The values of the segments between 0 and 1, where 0 is the background
+ * @param w The width of the frame
+ * @param result The segmented frame
+ * @param colored_bg_frame The background frame in color
+ * @param colored_frame The current frame in color
+ * @param alpha The alpha value for the background optimizer
  */
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
@@ -103,6 +108,21 @@ void segment(const color_helper::similarity_vectors &color_similarities,
   }
 }
 
+/**
+ * Segment a block of a frame based on the color and texture similarities with
+ * the background frame
+ * @param min_c The minimum c coordinate of the block
+ * @param max_c The maximum c coordinate of the block
+ * @param min_r The minimum r coordinate of the block
+ * @param max_r The maximum r coordinate of the block
+ * @param color_similarities The color similarities between the current frame
+ * and the background frame
+ * @param features The texture features of the current frame
+ * @param colored_bg_frame The background frame in color
+ * @param colored_frame The current frame in color
+ * @param gray_frame The current frame in grayscale
+ * @param w The width of the frame
+*/
 void segment_block(const unsigned int min_c, const unsigned int max_c,
                    const unsigned int min_r, const unsigned int max_r,
                    color_helper::similarity_vectors *color_similarities,
@@ -131,14 +151,17 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
  * Segment a frame based on the color and texture similarities with the
  * background frame
  * @param i The index of the current frame
+ * @param size The total number of frames
  * @param bg_features The texture features of the background frame
  * @param colored_bg_frame The background frame in color
- * @param colored_frames The colored frames
- * @param gray_frames The grayscale frames
+ * @param colored_frame The current frame in color
+ * @param gray_frame The current frame in grayscale
  * @param w The width of the frame
  * @param h The height of the frame
  * @param verbose Whether to display the progress
  * @param result The segmented frame
+ * @param num_threads The number of threads to use
+ * @param alpha The alpha value for the background optimizer
  */
 void segment_frame(const int i, const unsigned int size,
                    const texture_helper::feature_vector &bg_features,
