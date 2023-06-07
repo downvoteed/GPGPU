@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
 #include <color-helper.hh>
 #include <logger.hh>
 #include <texture-helper.hh>
@@ -9,6 +11,13 @@ namespace segmentation_helper {
 const float THRESHOLD = 0.67;
 const float ALPHA = 0.1;
 
+/**
+ * Optimize the background model
+ * @param colored_bg_frame The background frame in color
+ * @param colored_frame The current frame in color
+ * @param w The width of the frame
+ * @param i The index of the current pixel
+ */
 void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                      const unsigned int w, const unsigned int i) {
   // Update the background model
@@ -95,6 +104,30 @@ void segment(const color_helper::similarity_vectors &color_similarities,
   }
 }
 
+void segment_block(const unsigned int min_c, const unsigned int max_c,
+                   const unsigned int min_r, const unsigned int max_r,
+                   color_helper::similarity_vectors *color_similarities,
+                   texture_helper::feature_vector *features,
+                   cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
+                   const cv::Mat &gray_frame, const unsigned int w) {
+  for (unsigned int c = min_c; c < max_c; c++) {
+    for (unsigned int r = min_r; r < max_r; r++) {
+      float r_ratio = 0;
+      float g_ratio = 0;
+
+      // Compare the color components of the current frame with the
+      // background frame
+      color_helper::compare(*colored_bg_frame, colored_frame, c, r, r_ratio,
+                            g_ratio);
+      (*color_similarities)[0][r * w + c] = r_ratio;
+      (*color_similarities)[1][r * w + c] = g_ratio;
+
+      // Extract the texture features from the current frame
+      features->push_back(texture_helper::calculateLBP(gray_frame, c, r));
+    }
+  }
+}
+
 /**
  * Segment a frame based on the color and texture similarities with the
  * background frame
@@ -113,7 +146,8 @@ void segment_frame(const int i, const unsigned int size,
                    cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                    const cv::Mat &gray_frame, const unsigned int w,
                    const unsigned int h, const bool verbose, cv::Mat &result,
-                   const bool should_extract_bg) {
+                   const bool should_extract_bg,
+                   boost::asio::thread_pool *pool) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -131,22 +165,25 @@ void segment_frame(const int i, const unsigned int size,
   texture_helper::feature_vector *features =
       new texture_helper::feature_vector();
 
-  for (unsigned int c = 0; c < w; c++) {
-    for (unsigned int r = 0; r < h; r++) {
-      float r_ratio = 0;
-      float g_ratio = 0;
+  // Closest power of 2 to the number of threads in the pool
+  const unsigned int n_threads = 10;
+  const unsigned int available_threads =
+      n_threads % 2 == 0 ? n_threads : n_threads - 1;
+  const unsigned int block_size =
+      std::ceil((float)h / (float)available_threads);
 
-      // Compare the color components of the current frame with the
-      // background frame
-      color_helper::compare(*colored_bg_frame, colored_frame, c, r, r_ratio,
-                            g_ratio);
-      (*color_similarities)[0][r * w + c] = r_ratio;
-      (*color_similarities)[1][r * w + c] = g_ratio;
-
-      // Extract the texture features from the current frame
-      features->push_back(texture_helper::calculateLBP(gray_frame, c, r));
-    }
+  // Segment the frame in blocks
+  for (unsigned int j = 0; j < available_threads; j++) {
+    const unsigned int min_r = j * block_size;
+    const unsigned int max_r = std::min((j + 1) * block_size, h);
+    boost::asio::post(*pool, [min_r, max_r, color_similarities, features,
+                              colored_bg_frame, colored_frame, gray_frame, w] {
+      segment_block(0, w, min_r, max_r, color_similarities, features,
+                    colored_bg_frame, colored_frame, gray_frame, w);
+    });
   }
+
+  pool->join();
 
   // Segment the current frame based on the color and texture similarities with
   // the background frame

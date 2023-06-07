@@ -1,10 +1,18 @@
+#pragma once
+
+#include <boost/asio/thread_pool.hpp>
 #include <chrono>
 #include <logger.hh>
 #include <opencv2/opencv.hpp>
 #include <segmentation-helper.hh>
 #include <texture-helper.hh>
 
-void process_webcam(const bool verbose) {
+/**
+ * Process the webcam stream
+ * @param verbose Whether to display the log messages
+ * @param pool The thread pool
+ */
+void process_webcam(const bool verbose, boost::asio::thread_pool *pool) {
   // Open the webcam
   cv::VideoCapture webcam(0);
   if (!webcam.isOpened()) {
@@ -74,7 +82,7 @@ void process_webcam(const bool verbose) {
       }
 
       if (verbose) {
-        BOOST_LOG_TRIVIAL(info) << "- Background features extracted";
+        BOOST_LOG_TRIVIAL(info) << "Background features extracted";
       }
 
       // Release the gray background frame
@@ -86,9 +94,10 @@ void process_webcam(const bool verbose) {
 
     // Segment the frame
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
-    segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
-                                       frame, gray_frame, w, h, false,
-                                       std::ref(*result), should_extract_bg);
+    segmentation_helper::segment_frame(
+        0, 0, *bg_features, colored_bg_frame, frame, gray_frame, w, h, false,
+        std::ref(*result), should_extract_bg, pool);
+
     // Display the frame
     cv::imshow("Webcam", *result);
 
