@@ -44,10 +44,10 @@ void process_video(const bool verbose, const std::string &video_path,
   }
 
   // Extract the first frame from the dataset as the background
-  const cv::Mat &colored_bg_frame = colored_frames[0];
+  cv::Mat *colored_bg_frame = new cv::Mat(colored_frames[0]);
   const cv::Mat &gray_bg_frame = gray_frames[0];
-  const unsigned int w = colored_bg_frame.cols;
-  const unsigned int h = colored_bg_frame.rows;
+  const unsigned int w = colored_bg_frame->cols;
+  const unsigned int h = colored_bg_frame->rows;
 
   if (verbose) {
     BOOST_LOG_TRIVIAL(info) << "- Frame size: " << w << "x" << h;
@@ -131,9 +131,13 @@ void process_video(const bool verbose, const std::string &video_path,
     }
   }
 
+  // Release the frames
+  colored_bg_frame->release();
+
   // Free the memory
   delete frames_vector;
   delete bg_features;
+  delete colored_bg_frame;
 
   for (unsigned long i = 0; i < segmented_frames.size(); i++) {
     segmented_frames[i]->release();
