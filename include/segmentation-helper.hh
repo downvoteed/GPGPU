@@ -118,17 +118,18 @@ void segment(const color_helper::similarity_vectors &color_similarities,
  * @param color_similarities The color similarities between the current frame
  * and the background frame
  * @param features The texture features of the current frame
- * @param colored_bg_frame The background frame in color
+ * @param bg_colors The background color components
  * @param colored_frame The current frame in color
  * @param gray_frame The current frame in grayscale
  * @param w The width of the frame
-*/
+ */
 void segment_block(const unsigned int min_c, const unsigned int max_c,
                    const unsigned int min_r, const unsigned int max_r,
                    color_helper::similarity_vectors *color_similarities,
                    texture_helper::feature_vector *features,
-                   cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
-                   const cv::Mat &gray_frame, const unsigned int w) {
+                   const color_helper::color_vectors &bg_colors,
+                   const cv::Mat &colored_frame, const cv::Mat &gray_frame,
+                   const unsigned int w) {
   for (unsigned int c = min_c; c < max_c; c++) {
     for (unsigned int r = min_r; r < max_r; r++) {
       float r_ratio = 0;
@@ -136,8 +137,7 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
 
       // Compare the color components of the current frame with the
       // background frame
-      color_helper::compare(*colored_bg_frame, colored_frame, c, r, r_ratio,
-                            g_ratio);
+      color_helper::compare(bg_colors, colored_frame, c, r, r_ratio, g_ratio);
       (*color_similarities)[0][r * w + c] = r_ratio;
       (*color_similarities)[1][r * w + c] = g_ratio;
 
@@ -152,8 +152,9 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
  * background frame
  * @param i The index of the current frame
  * @param size The total number of frames
- * @param bg_features The texture features of the background frame
  * @param colored_bg_frame The background frame in color
+ * @param bg_features The texture features of the background frame
+ * @param bg_colors The background color components
  * @param colored_frame The current frame in color
  * @param gray_frame The current frame in grayscale
  * @param w The width of the frame
@@ -164,10 +165,12 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
  * @param alpha The alpha value for the background optimizer
  */
 void segment_frame(const int i, const unsigned int size,
+                   cv::Mat *colored_bg_frame,
                    const texture_helper::feature_vector &bg_features,
-                   cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
-                   const cv::Mat &gray_frame, const unsigned int w,
-                   const unsigned int h, const bool verbose, cv::Mat &result,
+                   const color_helper::color_vectors &bg_colors,
+                   const cv::Mat &colored_frame, const cv::Mat &gray_frame,
+                   const unsigned int w, const unsigned int h,
+                   const bool verbose, cv::Mat &result,
                    const unsigned int num_threads, const double alpha) {
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -195,10 +198,9 @@ void segment_frame(const int i, const unsigned int size,
   for (unsigned int j = 0; j < num_threads; j++) {
     const unsigned int min_r = j * block_size;
     const unsigned int max_r = std::min((j + 1) * block_size, h);
-    boost::asio::post(pool,
-                      std::bind(segment_block, 0, w, min_r, max_r,
-                                color_similarities, features, colored_bg_frame,
-                                colored_frame, std::ref(gray_frame), w));
+    boost::asio::post(pool, std::bind(segment_block, 0, w, min_r, max_r,
+                                      color_similarities, features, bg_colors,
+                                      colored_frame, std::ref(gray_frame), w));
   }
 
   // Wait for all threads to finish

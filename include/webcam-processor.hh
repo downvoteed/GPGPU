@@ -38,8 +38,11 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
 
   // Store the background frames and features
   cv::Mat *colored_bg_frame = nullptr;
+  color_helper::color_vectors *bg_colors =
+      new color_helper::color_vectors({color_helper::color_vector(w * h, 0),
+                                       color_helper::color_vector(w * h, 0)});
   texture_helper::feature_vector *bg_features =
-      new texture_helper::feature_vector();
+      new texture_helper::feature_vector(w * h, 0);
 
   // Keep track of the average execution time
   auto total_duration = std::chrono::high_resolution_clock::duration::zero();
@@ -80,8 +83,16 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
       // Extract the texture features from the background frame in grayscale
       for (unsigned int c = 0; c < w; c++) {
         for (unsigned int r = 0; r < h; r++) {
-          bg_features->push_back(
-              texture_helper::calculateLBP(gray_bg_frame, c, r));
+          // Update the color components from the background frame for the given
+          // coordinates
+          color_helper::convert(*colored_bg_frame, c, r,
+                                bg_colors->at(0)[r * w + c],
+                                bg_colors->at(1)[r * w + c]);
+
+          // Extract the texture features from the background frame for the
+          // given coordinates
+          (*bg_features)[r * w + c] =
+              texture_helper::calculateLBP(gray_bg_frame, c, r);
         }
       }
 
@@ -98,9 +109,9 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
 
     // Segment the frame
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
-    segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
-                                       frame, gray_frame, w, h, false,
-                                       std::ref(*result), num_threads, alpha_);
+    segmentation_helper::segment_frame(
+        0, 0, colored_bg_frame, *bg_features, *bg_colors, frame, gray_frame, w,
+        h, false, std::ref(*result), num_threads, alpha_);
 
     // Display the frame
     cv::imshow("Webcam", *result);

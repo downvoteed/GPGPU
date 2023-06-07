@@ -6,6 +6,8 @@
 
 namespace color_helper {
 
+using color_vector = std::vector<uint8_t>;
+using color_vectors = std::vector<color_vector>;
 using similarity_vector = std::vector<float>;
 using similarity_vectors = std::vector<similarity_vector>;
 
@@ -28,22 +30,23 @@ void convert(const cv::Mat &frame, const int c, const int r,
 
 /**
  * Compare the color components of two frames at position c, r
- * @param frame1 The first OpenCV frame
+ * @param bg_colors The background color components
  * @param frame2 The second OpenCV frame
  * @param c The c coordinate
  * @param r The r coordinate
  * @param r_ratio The R color similarity
  * @param g_ratio The G color similarity
  */
-void compare(const cv::Mat &frame1, const cv::Mat &frame2, const int c,
+void compare(const color_vectors &bg_colors, const cv::Mat &frame2, const int c,
              const int r, float &r_ratio, float &g_ratio) {
-  uint8_t r1 = 0;
-  uint8_t r2 = 0;
-  uint8_t g1 = 0;
-  uint8_t g2 = 0;
+  // Extract the color components from the background frame for the given
+  // coordinates
+  const uint8_t r1 = bg_colors[0][r * frame2.cols + c];
+  const uint8_t g1 = bg_colors[1][r * frame2.cols + c];
 
   // Calculate the color components for the two frames at the given coordinates
-  convert(frame1, c, r, r1, g1);
+  uint8_t r2 = 0;
+  uint8_t g2 = 0;
   convert(frame2, c, r, r2, g2);
 
   // Calculate the color similarities for each color component min/max

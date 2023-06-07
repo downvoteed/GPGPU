@@ -68,12 +68,24 @@ void process_video(const bool verbose, const std::string &video_path,
     BOOST_LOG_TRIVIAL(info) << "Extracting the background frame";
   }
 
-  // Extract the texture features from the background frame in grayscale
+  // Extract the color components and texture features from the background frame
+  color_helper::color_vectors *bg_colors =
+      new color_helper::color_vectors{color_helper::color_vector(w * h, 0),
+                                      color_helper::color_vector(w * h, 0)};
   texture_helper::feature_vector *bg_features =
-      new texture_helper::feature_vector();
+      new texture_helper::feature_vector(w * h, 0);
+
   for (unsigned int c = 0; c < w; c++) {
     for (unsigned int r = 0; r < h; r++) {
-      bg_features->push_back(texture_helper::calculateLBP(gray_bg_frame, c, r));
+      // Extract the color components from the background frame for the given
+      // coordinates
+      color_helper::convert(*colored_bg_frame, c, r,
+                            bg_colors->at(0)[r * w + c],
+                            bg_colors->at(1)[r * w + c]);
+
+      // Extract the texture features from the background frame for the given
+      bg_features->at(r * w + c) =
+          texture_helper::calculateLBP(gray_bg_frame, c, r);
     }
   }
 
@@ -93,10 +105,10 @@ void process_video(const bool verbose, const std::string &video_path,
     // Create a new frame to store the result
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
 
-    segmentation_helper::segment_frame(i, colored_frames.size(), *bg_features,
-                                       colored_bg_frame, colored_frames[i],
-                                       gray_frames[i], w, h, verbose,
-                                       std::ref(*result), num_threads, alpha);
+    segmentation_helper::segment_frame(
+        i, colored_frames.size(), colored_bg_frame, *bg_features, *bg_colors,
+        colored_frames[i], gray_frames[i], w, h, verbose, std::ref(*result),
+        num_threads, alpha);
 
     // Update the background features
     if (alpha > 0) {
@@ -106,6 +118,14 @@ void process_video(const bool verbose, const std::string &video_path,
 
       for (unsigned int c = 0; c < w; c++) {
         for (unsigned int r = 0; r < h; r++) {
+          // Update the color components from the background frame for the given
+          // coordinates
+          color_helper::convert(*colored_bg_frame, c, r,
+                                bg_colors->at(0)[r * w + c],
+                                bg_colors->at(1)[r * w + c]);
+
+          // Extract the texture features from the background frame for the
+          // given coordinates
           (*bg_features)[r * w + c] =
               texture_helper::calculateLBP(gray_background_frame, c, r);
         }
