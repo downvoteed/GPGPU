@@ -10,9 +10,13 @@
 /**
  * Process the webcam stream
  * @param verbose Whether to display the log messages
- * @param pool The thread pool
+ * @param num_threads The number of threads to use
+ * @param alpha The alpha value for the background optimizer
  */
-void process_webcam(const bool verbose) {
+void process_webcam(const bool verbose, const unsigned int num_threads,
+                    const double alpha) {
+  const double alpha_ = alpha == 0 ? 0.1 : alpha;
+
   // Open the webcam
   cv::VideoCapture webcam(0);
   if (!webcam.isOpened()) {
@@ -96,7 +100,7 @@ void process_webcam(const bool verbose) {
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
     segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
                                        frame, gray_frame, w, h, false,
-                                       std::ref(*result), should_extract_bg);
+                                       std::ref(*result), num_threads, alpha_);
 
     // Display the frame
     cv::imshow("Webcam", *result);

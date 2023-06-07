@@ -22,8 +22,8 @@ void process_video(const bool verbose, const std::string &video_path,
                    const std::optional<unsigned int> width,
                    const std::optional<unsigned int> height,
                    const std::optional<std::string> output_path,
-                   const bool display, const unsigned int fps,
-                   const bool should_extract_bg) {
+                   const unsigned int num_threads, const bool display,
+                   const unsigned int fps, const double alpha) {
   // Start a timer to measure the execution time
   const auto start = std::chrono::high_resolution_clock::now();
 
@@ -95,10 +95,10 @@ void process_video(const bool verbose, const std::string &video_path,
     segmentation_helper::segment_frame(i, colored_frames.size(), *bg_features,
                                        colored_bg_frame, colored_frames[i],
                                        gray_frames[i], w, h, verbose,
-                                       std::ref(*result), should_extract_bg);
+                                       std::ref(*result), num_threads, alpha);
 
     // Update the background features
-    if (should_extract_bg) {
+    if (alpha > 0) {
       cv::Mat gray_background_frame;
       cv::cvtColor(*colored_bg_frame, gray_background_frame,
                    cv::COLOR_BGR2GRAY);

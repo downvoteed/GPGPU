@@ -9,7 +9,6 @@
 
 namespace segmentation_helper {
 const float THRESHOLD = 0.67;
-const float ALPHA = 0.1;
 
 /**
  * Optimize the background model
@@ -19,7 +18,8 @@ const float ALPHA = 0.1;
  * @param i The index of the current pixel
  */
 void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
-                     const unsigned int w, const unsigned int i) {
+                     const unsigned int w, const unsigned int i,
+                     const double alpha) {
   // Update the background model
   const unsigned int c = i % w;
   const unsigned int r = i / w;
@@ -27,9 +27,9 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
   cv::Vec3b pixel = colored_frame.at<cv::Vec3b>(r, c);
   cv::Vec3b bg_pixel = colored_bg_frame->at<cv::Vec3b>(r, c);
 
-  bg_pixel[0] = ALPHA * pixel[0] + (1 - ALPHA) * bg_pixel[0];
-  bg_pixel[1] = ALPHA * pixel[1] + (1 - ALPHA) * bg_pixel[1];
-  bg_pixel[2] = ALPHA * pixel[2] + (1 - ALPHA) * bg_pixel[2];
+  bg_pixel[0] = alpha * pixel[0] + (1 - alpha) * bg_pixel[0];
+  bg_pixel[1] = alpha * pixel[1] + (1 - alpha) * bg_pixel[1];
+  bg_pixel[2] = alpha * pixel[2] + (1 - alpha) * bg_pixel[2];
 
   colored_bg_frame->at<cv::Vec3b>(r, c) = bg_pixel;
 }
@@ -45,9 +45,8 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
              const texture_helper::feature_vector &features,
-             const unsigned int w, cv::Mat &result,
-             const bool should_extract_bg, cv::Mat *colored_bg_frame,
-             const cv::Mat &colored_frame) {
+             const unsigned int w, cv::Mat &result, cv::Mat *colored_bg_frame,
+             const cv::Mat &colored_frame, const double alpha) {
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
     float r = color_similarities[0][i];
@@ -95,8 +94,8 @@ void segment(const color_helper::similarity_vectors &color_similarities,
     const uint8_t value = similarity >= THRESHOLD ? 0 : 1;
 
     // Background model optimization
-    if (should_extract_bg && value == 1) {
-      bg_optimization(colored_bg_frame, colored_frame, w, i);
+    if (alpha > 0 && value == 1) {
+      bg_optimization(colored_bg_frame, colored_frame, w, i, alpha);
     }
 
     // Build the segmented frame
@@ -146,7 +145,7 @@ void segment_frame(const int i, const unsigned int size,
                    cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                    const cv::Mat &gray_frame, const unsigned int w,
                    const unsigned int h, const bool verbose, cv::Mat &result,
-                   const bool should_extract_bg) {
+                   const unsigned int num_threads, const double alpha) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -165,13 +164,12 @@ void segment_frame(const int i, const unsigned int size,
       new texture_helper::feature_vector(w * h, 0);
 
   // Closest power of 2 to the number of threads in the pool
-  const unsigned int n_threads = 10;
-  const unsigned int block_size = h / n_threads;
+  const unsigned int block_size = h / num_threads;
 
-  boost::asio::thread_pool pool(n_threads);
+  boost::asio::thread_pool pool(num_threads);
 
   // Segment the frame in blocks
-  for (unsigned int j = 0; j < n_threads; j++) {
+  for (unsigned int j = 0; j < num_threads; j++) {
     const unsigned int min_r = j * block_size;
     const unsigned int max_r = std::min((j + 1) * block_size, h);
     boost::asio::post(pool,
@@ -186,8 +184,7 @@ void segment_frame(const int i, const unsigned int size,
   // Segment the current frame based on the color and texture similarities with
   // the background frame
   segmentation_helper::segment(*color_similarities, bg_features, *features, w,
-                               result, should_extract_bg, colored_bg_frame,
-                               colored_frame);
+                               result, colored_bg_frame, colored_frame, alpha);
 
   // Log the duration of the segmentation
   if (verbose) {
