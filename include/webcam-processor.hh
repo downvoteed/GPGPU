@@ -72,13 +72,11 @@ void process_webcam(const bool verbose) {
       continue;
     }
 
-    // Add a task to the thread pool
-    cv::Mat *result = new cv::Mat();
-
+    // Segment the frame
+    cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
     segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
                                        frame, gray_frame, w, h, false,
                                        std::ref(*result));
-
     // Display the frame
     cv::imshow("Webcam", *result);
 

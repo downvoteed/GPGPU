@@ -33,14 +33,14 @@ uint8_t calculateLBP(const cv::Mat &frame, const int c, const int r) {
   uint8_t lbp = 0;
   uint8_t center = frame.at<uint8_t>(r, c);
 
-  lbp = (lbp << 1) | (getPixel(frame, r - 1, c - 1) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r - 1, c) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r - 1, c + 1) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r, c - 1) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r, c + 1) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r + 1, c - 1) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r + 1, c) < center);
-  lbp = (lbp << 1) | (getPixel(frame, r + 1, c + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c - 1, r - 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c, r - 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c + 1, r - 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c + 1, r) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c + 1, r + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c, r + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c - 1, r + 1) < center);
+  lbp = (lbp << 1) | (getPixel(frame, c - 1, r) < center);
 
   return lbp;
 }

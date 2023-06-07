@@ -76,9 +76,10 @@ void process_video(const bool verbose, const std::string &video_path,
   // Process the frames
   frame_helper::frames_ref segmented_frames = {};
   for (unsigned long i = 1; i < colored_frames.size(); i++) {
-    // Add a task to the thread pool
-    cv::Mat *result = new cv::Mat();
+    // Create a new frame to store the result
+    cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
 
+    // Add a task to the thread pool
     boost::asio::post(pool, [i, bg_features, colored_bg_frame, colored_frames,
                              gray_frames, w, h, verbose, result] {
       segmentation_helper::segment_frame(
@@ -133,6 +134,7 @@ void process_video(const bool verbose, const std::string &video_path,
   // Free the memory
   delete frames_vector;
   delete bg_features;
+
   for (unsigned long i = 0; i < segmented_frames.size(); i++) {
     segmented_frames[i]->release();
     delete segmented_frames[i];

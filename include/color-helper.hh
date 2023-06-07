@@ -6,7 +6,6 @@
 
 namespace color_helper {
 
-using color_components = std::vector<uint8_t>;
 using similarity_vector = std::vector<float>;
 using similarity_vectors = std::vector<similarity_vector>;
 
@@ -15,20 +14,16 @@ using similarity_vectors = std::vector<similarity_vector>;
  * @param frame The OpenCV frame
  * @param c The c coordinate
  * @param r The r coordinate
- * @return The color components
+ * @param r_component The R component
+ * @param g_component The G component
  */
-const color_components *convert(const cv::Mat &frame, const int c,
-                                const int r) {
-  color_components *components = new color_components();
-
+void convert(const cv::Mat &frame, const int c, const int r,
+             uint8_t &r_component, uint8_t &g_component) {
   // Extract the color components from the frame for the given coordinates
-  cv::Vec3b pixel = frame.at<cv::Vec3b>(r, c);
-  uint8_t r_component = pixel[2];
-  uint8_t g_component = pixel[1];
 
-  components->push_back(r_component);
-  components->push_back(g_component);
-  return components;
+  cv::Vec3b pixel = frame.at<cv::Vec3b>(r, c);
+  r_component = pixel[2];
+  g_component = pixel[1];
 }
 
 /**
@@ -37,34 +32,32 @@ const color_components *convert(const cv::Mat &frame, const int c,
  * @param frame2 The second OpenCV frame
  * @param c The c coordinate
  * @param r The r coordinate
+ * @param r_ratio The R color similarity
+ * @param g_ratio The G color similarity
  * @return The color similarities
  */
-const similarity_vector *compare(const cv::Mat &frame1, const cv::Mat &frame2,
-                                 const int c, const int r) {
-  similarity_vector *similarities = new similarity_vector();
+void compare(const cv::Mat &frame1, const cv::Mat &frame2, const int c,
+             const int r, float &r_ratio, float &g_ratio) {
+  uint8_t r1 = 0;
+  uint8_t r2 = 0;
+  uint8_t g1 = 0;
+  uint8_t g2 = 0;
 
   // Calculate the color components for the two frames at the given coordinates
-  const color_components *c1 = convert(frame1, c, r);
-  const color_components *c2 = convert(frame2, c, r);
+  convert(frame1, c, r, r1, g1);
+  convert(frame2, c, r, r2, g2);
 
-  // Calculate the color similarities for each color component
-  uint8_t r1 = c1->at(0);
-  uint8_t r2 = c2->at(0);
-  float r_max = std::max(r1, r2);
-  float r_min = std::min(r1, r2);
-  similarities->push_back(r_min / r_max);
+  // Calculate the color similarities for each color component min/max
+  if (r1 > r2) {
+    r_ratio = (float)r2 / (float)r1;
+  } else {
+    r_ratio = (float)r1 / (float)r2;
+  }
 
-  uint8_t g1 = c1->at(1);
-  uint8_t g2 = c2->at(1);
-  float g_max = std::max(g1, g2);
-  float g_min = std::min(g1, g2);
-  similarities->push_back(g_min / g_max);
-
-  // Free the memory
-  delete c1;
-  delete c2;
-
-  return similarities;
+  if (g1 > g2) {
+    g_ratio = (float)g2 / (float)g1;
+  } else {
+    g_ratio = (float)g1 / (float)g2;
+  }
 }
-
 } // namespace color_helper
