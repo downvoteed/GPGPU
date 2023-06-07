@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
       "height", po::value<unsigned int>(), "set the height of the frame")(
       "display,d", po::value<bool>()->default_value(true),
       "display the segmented frames")(
-      "output-path,o", po::value<std::string>(),
+      "output,o", po::value<std::string>(),
       "if set, save the video to the given path")(
       "fps,f", po::value<unsigned int>()->default_value(24),
       "set the FPS of the video")("webcam,w", "use the webcam as input")(
