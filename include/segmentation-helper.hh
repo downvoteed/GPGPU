@@ -107,18 +107,18 @@ void segment_frame(const int i, const unsigned int size,
 
   for (unsigned int c = 0; c < w; c++) {
     for (unsigned int r = 0; r < h; r++) {
+      float r_ratio = 0;
+      float g_ratio = 0;
+
       // Compare the color components of the current frame with the
       // background frame
-      const color_helper::similarity_vector *color_similarity_vector =
-          color_helper::compare(colored_bg_frame, colored_frame, c, r);
-      (*color_similarities)[0][r * w + c] = color_similarity_vector->at(0);
-      (*color_similarities)[1][r * w + c] = color_similarity_vector->at(1);
+      color_helper::compare(colored_bg_frame, colored_frame, c, r, r_ratio,
+                            g_ratio);
+      (*color_similarities)[0][r * w + c] = r_ratio;
+      (*color_similarities)[1][r * w + c] = g_ratio;
 
       // Extract the texture features from the current frame
       features->push_back(texture_helper::calculateLBP(gray_frame, c, r));
-
-      // Free the memory
-      delete color_similarity_vector;
     }
   }
 
