@@ -33,7 +33,7 @@ void process_webcam(const bool verbose) {
   auto total_duration = std::chrono::high_resolution_clock::duration::zero();
   unsigned int total_frames = 0;
 
-  bool should_extract_bg = true;
+  const bool should_extract_bg = true;
 
   // Main loop
   while (true) {
@@ -88,7 +88,7 @@ void process_webcam(const bool verbose) {
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
     segmentation_helper::segment_frame(0, 0, *bg_features, colored_bg_frame,
                                        frame, gray_frame, w, h, false,
-                                       std::ref(*result));
+                                       std::ref(*result), should_extract_bg);
     // Display the frame
     cv::imshow("Webcam", *result);
 

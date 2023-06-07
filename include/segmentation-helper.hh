@@ -7,7 +7,7 @@
 
 namespace segmentation_helper {
 const float THRESHOLD = 0.67;
-const float ALPHA = 0.5;
+const float ALPHA = 0.1;
 
 void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                      const unsigned int w, const unsigned int i) {
@@ -36,7 +36,8 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
              const texture_helper::feature_vector &features,
-             const unsigned int w, cv::Mat &result, cv::Mat *colored_bg_frame,
+             const unsigned int w, cv::Mat &result,
+             const bool should_extract_bg, cv::Mat *colored_bg_frame,
              const cv::Mat &colored_frame) {
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
@@ -85,7 +86,7 @@ void segment(const color_helper::similarity_vectors &color_similarities,
     const uint8_t value = similarity >= THRESHOLD ? 0 : 1;
 
     // Background model optimization
-    if (value == 1) {
+    if (should_extract_bg && value == 1) {
       bg_optimization(colored_bg_frame, colored_frame, w, i);
     }
 
@@ -111,7 +112,8 @@ void segment_frame(const int i, const unsigned int size,
                    const texture_helper::feature_vector &bg_features,
                    cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                    const cv::Mat &gray_frame, const unsigned int w,
-                   const unsigned int h, const bool verbose, cv::Mat &result) {
+                   const unsigned int h, const bool verbose, cv::Mat &result,
+                   const bool should_extract_bg) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -149,7 +151,8 @@ void segment_frame(const int i, const unsigned int size,
   // Segment the current frame based on the color and texture similarities with
   // the background frame
   segmentation_helper::segment(*color_similarities, bg_features, *features, w,
-                               result, colored_bg_frame, colored_frame);
+                               result, should_extract_bg, colored_bg_frame,
+                               colored_frame);
 
   // Log the duration of the segmentation
   if (verbose) {

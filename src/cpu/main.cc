@@ -31,7 +31,9 @@ int main(int argc, char **argv) {
       "output-path,o", po::value<std::string>(),
       "if set, save the video to the given path")(
       "fps,f", po::value<unsigned int>()->default_value(24),
-      "set the FPS of the video")("webcam,w", "use the webcam as input");
+      "set the FPS of the video")("webcam,w", "use the webcam as input")(
+      "background-optimizer",
+      "use the background optimizer (is default for the webcam)");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -116,7 +118,8 @@ int main(int argc, char **argv) {
             : std::nullopt;
 
     process_video(verbose, input_path, width, height, pool, output_path,
-                  vm["display"].as<bool>(), vm["fps"].as<unsigned int>());
+                  vm["display"].as<bool>(), vm["fps"].as<unsigned int>(),
+                  vm.count("background-optimizer") > 0);
   }
 
   // If the webcam flag is set, process the webcam stream
