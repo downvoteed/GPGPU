@@ -8,4 +8,6 @@ if (NOT APPLE)
     find_package(CUDAToolkit REQUIRED)
 endif()
 
-target_link_libraries(gpu PRIVATE ${CUDA_LIBRARIES})
+find_package(OpenCV REQUIRED)
+target_link_libraries(gpu PRIVATE ${CUDA_LIBRARIES} ${OpenCV_LIBS})
+include_directories(${CUDA_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS})
