@@ -93,9 +93,6 @@ int main(int argc, char **argv) {
     BOOST_LOG_TRIVIAL(info) << "Using " << num_threads << " threads";
   }
 
-  // Create the thread pool
-  boost::asio::thread_pool pool(num_threads);
-
   // If an input path is provided, process the video
   if (vm.count("input")) {
     // Determine the input path
@@ -113,13 +110,13 @@ int main(int argc, char **argv) {
 
     // Determine the output path
     const std::optional<std::string> output_path =
-        vm.count("output-path") > 0
-            ? std::make_optional(vm["output-path"].as<std::string>())
+        vm.count("output") > 0
+            ? std::make_optional(vm["output"].as<std::string>())
             : std::nullopt;
 
     process_video(verbose, input_path, width, height, output_path,
                   vm["display"].as<bool>(), vm["fps"].as<unsigned int>(),
-                  vm.count("background-optimizer") > 0, pool);
+                  vm.count("background-optimizer") > 0);
   }
 
   // If the webcam flag is set, process the webcam stream

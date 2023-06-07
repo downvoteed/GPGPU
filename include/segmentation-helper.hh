@@ -123,7 +123,7 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
       (*color_similarities)[1][r * w + c] = g_ratio;
 
       // Extract the texture features from the current frame
-      features->push_back(texture_helper::calculateLBP(gray_frame, c, r));
+      features->at(r * w + c) = texture_helper::calculateLBP(gray_frame, c, r);
     }
   }
 }
@@ -162,31 +162,26 @@ void segment_frame(const int i, const unsigned int size,
           color_helper::similarity_vector(w * h, 0),
           color_helper::similarity_vector(w * h, 0)};
   texture_helper::feature_vector *features =
-      new texture_helper::feature_vector();
+      new texture_helper::feature_vector(w * h, 0);
 
   // Closest power of 2 to the number of threads in the pool
   const unsigned int n_threads = 10;
-  const unsigned int available_threads =
-      n_threads % 2 == 0 ? n_threads : n_threads - 1;
-  const unsigned int block_size =
-      std::ceil((float)h / (float)available_threads);
+  const unsigned int block_size = h / n_threads;
 
-  boost::asio::thread_pool pool2(available_threads);
+  boost::asio::thread_pool pool(n_threads);
 
   // Segment the frame in blocks
-  for (unsigned int j = 0; j < available_threads; j++) {
+  for (unsigned int j = 0; j < n_threads; j++) {
     const unsigned int min_r = j * block_size;
     const unsigned int max_r = std::min((j + 1) * block_size, h);
-    // boost::asio::post(pool2, [min_r, max_r, color_similarities, features,
-    //                           colored_bg_frame, colored_frame, gray_frame,
-    //                           w]() {
-    segment_block(0, w, min_r, max_r, color_similarities, features,
-                  colored_bg_frame, colored_frame, gray_frame, w);
-    // });
+    boost::asio::post(pool,
+                      std::bind(segment_block, 0, w, min_r, max_r,
+                                color_similarities, features, colored_bg_frame,
+                                colored_frame, std::ref(gray_frame), w));
   }
 
   // Wait for all threads to finish
-  // pool2.join();
+  pool.join();
 
   // Segment the current frame based on the color and texture similarities with
   // the background frame
