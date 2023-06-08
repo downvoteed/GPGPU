@@ -16,11 +16,14 @@ const float THRESHOLD = 0.67;
  * @param colored_frame The current frame in color
  * @param w The width of the frame
  * @param i The index of the current pixel
- * @param alpha The alpha value for the background optimizer
+ * @param value The value of the current pixel
+ * @param learning_rate The learning rate for adaptive alpha adjustment
+ * @param weights The weights for the weighted average blending
  */
 void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                      const unsigned int w, const unsigned int i,
-                     const double alpha) {
+                     const uint8_t value, const double learning_rate,
+                     cv::Mat &weights) {
   // Update the background model
   const unsigned int c = i % w;
   const unsigned int r = i / w;
@@ -28,10 +31,23 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
   cv::Vec3b pixel = colored_frame.at<cv::Vec3b>(r, c);
   cv::Vec3b bg_pixel = colored_bg_frame->at<cv::Vec3b>(r, c);
 
-  bg_pixel[0] = alpha * pixel[0] + (1 - alpha) * bg_pixel[0];
-  bg_pixel[1] = alpha * pixel[1] + (1 - alpha) * bg_pixel[1];
-  bg_pixel[2] = alpha * pixel[2] + (1 - alpha) * bg_pixel[2];
+  double weight = weights.at<double>(r, c);
+  double updated_weight = weight;
 
+  if (value == 1) {
+    // Compute the weighted average of the pixel values
+    bg_pixel[0] = (1 - weight) * bg_pixel[0] + weight * pixel[0];
+    bg_pixel[1] = (1 - weight) * bg_pixel[1] + weight * pixel[1];
+    bg_pixel[2] = (1 - weight) * bg_pixel[2] + weight * pixel[2];
+
+    // Update the weights with an adaptive learning rate
+    updated_weight = learning_rate * weight + (1 - learning_rate);
+  }
+
+  // Update the weights
+  weights.at<double>(r, c) = updated_weight;
+
+  // Update the background frame with the optimized pixel value
   colored_bg_frame->at<cv::Vec3b>(r, c) = bg_pixel;
 }
 
@@ -45,13 +61,14 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
  * @param result The segmented frame
  * @param colored_bg_frame The background frame in color
  * @param colored_frame The current frame in color
- * @param alpha The alpha value for the background optimizer
+ * @param learning_rate The learning_rate value for the background optimizer
  */
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
              const texture_helper::feature_vector &features,
              const unsigned int w, cv::Mat &result, cv::Mat *colored_bg_frame,
-             const cv::Mat &colored_frame, const double alpha) {
+             const cv::Mat &colored_frame, const double learning_rate,
+             cv::Mat &weights) {
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
     float r = color_similarities[0][i];
@@ -99,8 +116,9 @@ void segment(const color_helper::similarity_vectors &color_similarities,
     const uint8_t value = similarity >= THRESHOLD ? 0 : 1;
 
     // Background model optimization
-    if (alpha > 0 && value == 1) {
-      bg_optimization(colored_bg_frame, colored_frame, w, i, alpha);
+    if (learning_rate > 0) {
+      bg_optimization(colored_bg_frame, colored_frame, w, i, value,
+                      learning_rate, weights);
     }
 
     // Build the segmented frame
@@ -162,7 +180,8 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
  * @param verbose Whether to display the progress
  * @param result The segmented frame
  * @param num_threads The number of threads to use
- * @param alpha The alpha value for the background optimizer
+ * @param learning_rate The learning_rate value for the background optimizer
+ * @param weights The weights for the weighted average blending
  */
 void segment_frame(const int i, const unsigned int size,
                    cv::Mat *colored_bg_frame,
@@ -171,7 +190,8 @@ void segment_frame(const int i, const unsigned int size,
                    const cv::Mat &colored_frame, const cv::Mat &gray_frame,
                    const unsigned int w, const unsigned int h,
                    const bool verbose, cv::Mat &result,
-                   const unsigned int num_threads, const double alpha) {
+                   const unsigned int num_threads, const double learning_rate,
+                   cv::Mat &weights) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -189,7 +209,7 @@ void segment_frame(const int i, const unsigned int size,
   texture_helper::feature_vector *features =
       new texture_helper::feature_vector(w * h, 0);
 
-  // Closest power of 2 to the number of threads in the pool
+  // Calculate the block size
   const unsigned int block_size = h / num_threads;
 
   boost::asio::thread_pool pool(num_threads);
@@ -209,7 +229,8 @@ void segment_frame(const int i, const unsigned int size,
   // Segment the current frame based on the color and texture similarities with
   // the background frame
   segmentation_helper::segment(*color_similarities, bg_features, *features, w,
-                               result, colored_bg_frame, colored_frame, alpha);
+                               result, colored_bg_frame, colored_frame,
+                               learning_rate, weights);
 
   // Log the duration of the segmentation
   if (verbose) {
@@ -225,6 +246,73 @@ void segment_frame(const int i, const unsigned int size,
   // Free the memory
   delete color_similarities;
   delete features;
+}
+
+/**
+ * Extract the color and texture features from the background frame
+ * @param w The width of the frame
+ * @param h The height of the frame
+ * @param colored_bg_frame The background frame in color
+ * @param bg_colors The background color components
+ * @param bg_features The texture features of the background frame
+ */
+void extract_frame(const unsigned int w, const unsigned int h,
+                   cv::Mat *colored_bg_frame,
+                   color_helper::color_vectors *bg_colors,
+                   texture_helper::feature_vector *bg_features) {
+  // Convert the background frame to grayscale
+  cv::Mat gray_bg_frame;
+  cv::cvtColor(*colored_bg_frame, gray_bg_frame, cv::COLOR_BGR2GRAY);
+
+  // Calculate the center value for LBP
+  uint8_t center = gray_bg_frame.at<uint8_t>(0, 0);
+
+  // Process the first row
+  unsigned int c = 0;
+  for (; c < w; c++) {
+    // Calculate LBP for the pixel in the row
+    (*bg_features)[c] = texture_helper::calculateLBP(gray_bg_frame, c, 0);
+
+    // Update the color components from the background frame for the given
+    color_helper::convert(*colored_bg_frame, c, 0, bg_colors->at(0)[c],
+                          bg_colors->at(1)[c]);
+  }
+
+  // Process the remaining rows
+  unsigned int r = 1;
+  for (; r < h; r++) {
+    uint8_t previous_row_pixel = (*bg_features)[(r - 1) * w];
+
+    // Calculate LBP for the first pixel in the row
+    (*bg_features)[r * w] = texture_helper::calculateLBP(gray_bg_frame, 0, r);
+
+    // Update the color components from the background frame for the given
+    color_helper::convert(*colored_bg_frame, c, r, bg_colors->at(0)[r * w],
+                          bg_colors->at(1)[r * w]);
+
+    // Process the remaining pixels in the row
+    c = 1;
+    for (; c < w; c++) {
+      uint8_t current_pixel = texture_helper::calculateLBP(gray_bg_frame, c, r);
+
+      // Shift the previous row's pixel value to the left by 1 bit
+      previous_row_pixel <<= 1;
+
+      // Update the previous row's pixel value with the current pixel value
+      previous_row_pixel |= (current_pixel < center);
+
+      // Set the LBP value for the current pixel in the features array
+      (*bg_features)[r * w + c] = previous_row_pixel;
+
+      // Update the color components from the background frame for the given
+      color_helper::convert(*colored_bg_frame, c, r,
+                            bg_colors->at(0)[r * w + c],
+                            bg_colors->at(1)[r * w + c]);
+    }
+  }
+
+  // Release the gray background frame
+  gray_bg_frame.release();
 }
 
 } // namespace segmentation_helper
