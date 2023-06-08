@@ -17,14 +17,14 @@
  * @param num_threads The number of threads to use
  * @param display Whether to display the segmented frames
  * @param fps The FPS of the output video file
- * @param alpha The alpha value for the background optimizer
+ * @param learning_rate The learning_rate value for the background optimizer
  */
 void process_video(const bool verbose, const std::string &video_path,
                    const std::optional<unsigned int> width,
                    const std::optional<unsigned int> height,
                    const std::optional<std::string> output_path,
                    const unsigned int num_threads, const bool display,
-                   const unsigned int fps, const double alpha) {
+                   const unsigned int fps, const double learning_rate) {
   // Start a timer to measure the execution time
   const auto start = std::chrono::high_resolution_clock::now();
 
@@ -78,6 +78,9 @@ void process_video(const bool verbose, const std::string &video_path,
   segmentation_helper::extract_frame(w, h, colored_bg_frame, bg_colors,
                                      bg_features);
 
+  // Create a matrix to store the weights of the background features
+  cv::Mat weights(w, h, CV_32FC1, cv::Scalar(0.5));
+
   auto end = std::chrono::high_resolution_clock::now();
 
   if (verbose) {
@@ -97,12 +100,12 @@ void process_video(const bool verbose, const std::string &video_path,
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
 
     // Update the background features
-    if (alpha > 0) {
+    if (learning_rate > 0) {
       // Segment the frame
       segmentation_helper::segment_frame(
           i, colored_frames.size(), colored_bg_frame, *bg_features, *bg_colors,
           colored_frames[i], gray_frames[i], w, h, verbose, std::ref(*result),
-          num_threads, alpha);
+          num_threads, learning_rate, std::ref(weights));
 
       // Extract the background features
       segmentation_helper::extract_frame(w, h, colored_bg_frame, bg_colors,
@@ -114,12 +117,12 @@ void process_video(const bool verbose, const std::string &video_path,
     } else {
       boost::asio::post(pool, [i, colored_bg_frame, bg_features, bg_colors,
                                colored_frames, gray_frames, w, h, verbose,
-                               result, num_threads, alpha]() {
+                               result, num_threads, learning_rate, &weights]() {
         // Segment the frame
         segmentation_helper::segment_frame(
             i, colored_frames.size(), colored_bg_frame, *bg_features,
             *bg_colors, colored_frames[i], gray_frames[i], w, h, verbose,
-            std::ref(*result), num_threads, alpha);
+            std::ref(*result), num_threads, learning_rate, std::ref(weights));
 
         // Release the frames
         const_cast<cv::Mat &>(colored_frames[i]).release();

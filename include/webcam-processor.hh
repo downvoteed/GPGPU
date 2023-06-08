@@ -11,14 +11,26 @@
  * Process the webcam stream
  * @param verbose Whether to display the log messages
  * @param num_threads The number of threads to use
- * @param alpha The alpha value for the background optimizer
+ * @param learning_rate The learning_rate value for the background optimizer
  */
-void process_webcam(const bool verbose, const unsigned int num_threads,
-                    const double alpha) {
-  const double alpha_ = alpha == 0 ? 0.1 : alpha;
+void process_webcam(const bool verbose, const std::optional<unsigned int> width,
+                    const std::optional<unsigned int> height,
+                    const bool flipped, const unsigned int num_threads,
+                    const double learning_rate) {
+  const double lr = learning_rate == 0 ? 0.1 : learning_rate;
 
-  // Open the webcam
+  // Open the webcam flipped
   cv::VideoCapture webcam(0);
+
+  // Set the webcam properties
+  if (width.has_value()) {
+    webcam.set(cv::CAP_PROP_FRAME_WIDTH, width.value());
+  }
+  if (height.has_value()) {
+    webcam.set(cv::CAP_PROP_FRAME_HEIGHT, height.value());
+  }
+
+  // Check if the webcam was opened successfully
   if (!webcam.isOpened()) {
     std::cerr << "Failed to open the webcam!" << std::endl;
     exit(1);
@@ -44,6 +56,9 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
   texture_helper::feature_vector *bg_features =
       new texture_helper::feature_vector(w * h, 0);
 
+  // Create a matrix to store the weights of the background features
+  cv::Mat weights(w, h, CV_32FC1, cv::Scalar(0.5));
+
   // Keep track of the average execution time
   auto total_duration = std::chrono::high_resolution_clock::duration::zero();
   unsigned int total_frames = 0;
@@ -55,6 +70,11 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
     // Read a frame from the webcam
     cv::Mat frame;
     webcam >> frame;
+
+    // Flip the frame if needed
+    if (flipped) {
+      cv::flip(frame, frame, 1);
+    }
 
     // Convert the frame to grayscale
     cv::Mat gray_frame;
@@ -93,7 +113,7 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
     segmentation_helper::segment_frame(
         0, 0, colored_bg_frame, *bg_features, *bg_colors, frame, gray_frame, w,
-        h, false, std::ref(*result), num_threads, alpha_);
+        h, false, std::ref(*result), num_threads, lr, weights);
 
     // Display the frame
     cv::imshow("Webcam", *result);

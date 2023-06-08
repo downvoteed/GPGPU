@@ -32,9 +32,10 @@ int main(int argc, char **argv) {
       "if set, save the video to the given path")(
       "fps,f", po::value<unsigned int>()->default_value(24),
       "set the FPS of the video")("webcam,w", "use the webcam as input")(
+      "flipped", "flip the webcam stream")(
       "background-optimizer", po::value<double>()->default_value(0),
-      "alpha value for the background optimizer (default: 0 for videos, 0.1 "
-      "for webcam)");
+      "learning rate value for the background optimizer (default: 0 for "
+      "videos, 0.1 for webcam)");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -122,7 +123,14 @@ int main(int argc, char **argv) {
 
   // If the webcam flag is set, process the webcam stream
   if (vm.count("webcam")) {
-    process_webcam(verbose, num_threads,
+    process_webcam(verbose,
+                   vm.count("width") > 0
+                       ? std::make_optional(vm["width"].as<unsigned int>())
+                       : std::nullopt,
+                   vm.count("height") > 0
+                       ? std::make_optional(vm["height"].as<unsigned int>())
+                       : std::nullopt,
+                   vm.count("flipped") > 0, num_threads,
                    vm["background-optimizer"].as<double>());
   }
 

@@ -16,11 +16,14 @@ const float THRESHOLD = 0.67;
  * @param colored_frame The current frame in color
  * @param w The width of the frame
  * @param i The index of the current pixel
- * @param alpha The alpha value for the background optimizer
+ * @param value The value of the current pixel
+ * @param learning_rate The learning rate for adaptive alpha adjustment
+ * @param weights The weights for the weighted average blending
  */
 void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
                      const unsigned int w, const unsigned int i,
-                     const double alpha) {
+                     const uint8_t value, const double learning_rate,
+                     cv::Mat &weights) {
   // Update the background model
   const unsigned int c = i % w;
   const unsigned int r = i / w;
@@ -28,10 +31,43 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
   cv::Vec3b pixel = colored_frame.at<cv::Vec3b>(r, c);
   cv::Vec3b bg_pixel = colored_bg_frame->at<cv::Vec3b>(r, c);
 
-  bg_pixel[0] = alpha * pixel[0] + (1 - alpha) * bg_pixel[0];
-  bg_pixel[1] = alpha * pixel[1] + (1 - alpha) * bg_pixel[1];
-  bg_pixel[2] = alpha * pixel[2] + (1 - alpha) * bg_pixel[2];
+  double weight = weights.at<double>(r, c);
+  double updated_weight;
 
+  if (value == 1) {
+    // Compute the weighted average of the pixel values
+    bg_pixel[0] = (1 - weight) * bg_pixel[0] + weight * pixel[0];
+    bg_pixel[1] = (1 - weight) * bg_pixel[1] + weight * pixel[1];
+    bg_pixel[2] = (1 - weight) * bg_pixel[2] + weight * pixel[2];
+
+    // Update the weights with an adaptive learning rate
+    updated_weight = learning_rate * weight + (1 - learning_rate);
+  } else {
+    // Calculate the absolute difference between the current pixel and the
+    // background pixel
+    uint8_t diff1 = pixel[1] - bg_pixel[1] > 0 ? pixel[1] - bg_pixel[1]
+                                               : bg_pixel[1] - pixel[1];
+    uint8_t diff2 = pixel[2] - bg_pixel[2] > 0 ? pixel[2] - bg_pixel[2]
+                                               : bg_pixel[2] - pixel[2];
+    uint8_t diff3 = pixel[3] - bg_pixel[3] > 0 ? pixel[3] - bg_pixel[3]
+                                               : bg_pixel[3] - pixel[3];
+
+    // Compute the average difference across the color channels
+    double average_diff = (diff1 + diff2 + diff3) / 3.0;
+
+    // Update the weight based on the average difference if it is greater than
+    // the threshold
+    if (average_diff > THRESHOLD) {
+      updated_weight = learning_rate * average_diff + (1 - learning_rate);
+    } else {
+      updated_weight = learning_rate * average_diff;
+    }
+  }
+
+  // Update the weights
+  weights.at<double>(r, c) = updated_weight;
+
+  // Update the background frame with the optimized pixel value
   colored_bg_frame->at<cv::Vec3b>(r, c) = bg_pixel;
 }
 
@@ -45,13 +81,14 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
  * @param result The segmented frame
  * @param colored_bg_frame The background frame in color
  * @param colored_frame The current frame in color
- * @param alpha The alpha value for the background optimizer
+ * @param learning_rate The learning_rate value for the background optimizer
  */
 void segment(const color_helper::similarity_vectors &color_similarities,
              const texture_helper::feature_vector &bg_features,
              const texture_helper::feature_vector &features,
              const unsigned int w, cv::Mat &result, cv::Mat *colored_bg_frame,
-             const cv::Mat &colored_frame, const double alpha) {
+             const cv::Mat &colored_frame, const double learning_rate,
+             cv::Mat &weights) {
   // Calculate the weighted sum of the color and texture similarities
   for (unsigned long i = 0; i < color_similarities[0].size(); i++) {
     float r = color_similarities[0][i];
@@ -99,8 +136,9 @@ void segment(const color_helper::similarity_vectors &color_similarities,
     const uint8_t value = similarity >= THRESHOLD ? 0 : 1;
 
     // Background model optimization
-    if (alpha > 0 && value == 1) {
-      bg_optimization(colored_bg_frame, colored_frame, w, i, alpha);
+    if (learning_rate > 0) {
+      bg_optimization(colored_bg_frame, colored_frame, w, i, value,
+                      learning_rate, weights);
     }
 
     // Build the segmented frame
@@ -162,7 +200,8 @@ void segment_block(const unsigned int min_c, const unsigned int max_c,
  * @param verbose Whether to display the progress
  * @param result The segmented frame
  * @param num_threads The number of threads to use
- * @param alpha The alpha value for the background optimizer
+ * @param learning_rate The learning_rate value for the background optimizer
+ * @param weights The weights for the weighted average blending
  */
 void segment_frame(const int i, const unsigned int size,
                    cv::Mat *colored_bg_frame,
@@ -171,7 +210,8 @@ void segment_frame(const int i, const unsigned int size,
                    const cv::Mat &colored_frame, const cv::Mat &gray_frame,
                    const unsigned int w, const unsigned int h,
                    const bool verbose, cv::Mat &result,
-                   const unsigned int num_threads, const double alpha) {
+                   const unsigned int num_threads, const double learning_rate,
+                   cv::Mat &weights) {
   auto start = std::chrono::high_resolution_clock::now();
 
   // Display the progress
@@ -209,7 +249,8 @@ void segment_frame(const int i, const unsigned int size,
   // Segment the current frame based on the color and texture similarities with
   // the background frame
   segmentation_helper::segment(*color_similarities, bg_features, *features, w,
-                               result, colored_bg_frame, colored_frame, alpha);
+                               result, colored_bg_frame, colored_frame,
+                               learning_rate, weights);
 
   // Log the duration of the segmentation
   if (verbose) {
