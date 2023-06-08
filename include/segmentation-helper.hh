@@ -189,7 +189,7 @@ void segment_frame(const int i, const unsigned int size,
   texture_helper::feature_vector *features =
       new texture_helper::feature_vector(w * h, 0);
 
-  // Closest power of 2 to the number of threads in the pool
+  // Calculate the block size
   const unsigned int block_size = h / num_threads;
 
   boost::asio::thread_pool pool(num_threads);
@@ -225,6 +225,73 @@ void segment_frame(const int i, const unsigned int size,
   // Free the memory
   delete color_similarities;
   delete features;
+}
+
+/**
+ * Extract the color and texture features from the background frame
+ * @param w The width of the frame
+ * @param h The height of the frame
+ * @param colored_bg_frame The background frame in color
+ * @param bg_colors The background color components
+ * @param bg_features The texture features of the background frame
+ */
+void extract_frame(const unsigned int w, const unsigned int h,
+                   cv::Mat *colored_bg_frame,
+                   color_helper::color_vectors *bg_colors,
+                   texture_helper::feature_vector *bg_features) {
+  // Convert the background frame to grayscale
+  cv::Mat gray_bg_frame;
+  cv::cvtColor(*colored_bg_frame, gray_bg_frame, cv::COLOR_BGR2GRAY);
+
+  // Calculate the center value for LBP
+  uint8_t center = gray_bg_frame.at<uint8_t>(0, 0);
+
+  // Process the first row
+  unsigned int c = 0;
+  for (; c < w; c++) {
+    // Calculate LBP for the pixel in the row
+    (*bg_features)[c] = texture_helper::calculateLBP(gray_bg_frame, c, 0);
+
+    // Update the color components from the background frame for the given
+    color_helper::convert(*colored_bg_frame, c, 0, bg_colors->at(0)[c],
+                          bg_colors->at(1)[c]);
+  }
+
+  // Process the remaining rows
+  unsigned int r = 1;
+  for (; r < h; r++) {
+    uint8_t previous_row_pixel = (*bg_features)[(r - 1) * w];
+
+    // Calculate LBP for the first pixel in the row
+    (*bg_features)[r * w] = texture_helper::calculateLBP(gray_bg_frame, 0, r);
+
+    // Update the color components from the background frame for the given
+    color_helper::convert(*colored_bg_frame, c, r, bg_colors->at(0)[r * w],
+                          bg_colors->at(1)[r * w]);
+
+    // Process the remaining pixels in the row
+    c = 1;
+    for (; c < w; c++) {
+      uint8_t current_pixel = texture_helper::calculateLBP(gray_bg_frame, c, r);
+
+      // Shift the previous row's pixel value to the left by 1 bit
+      previous_row_pixel <<= 1;
+
+      // Update the previous row's pixel value with the current pixel value
+      previous_row_pixel |= (current_pixel < center);
+
+      // Set the LBP value for the current pixel in the features array
+      (*bg_features)[r * w + c] = previous_row_pixel;
+
+      // Update the color components from the background frame for the given
+      color_helper::convert(*colored_bg_frame, c, r,
+                            bg_colors->at(0)[r * w + c],
+                            bg_colors->at(1)[r * w + c]);
+    }
+  }
+
+  // Release the gray background frame
+  gray_bg_frame.release();
 }
 
 } // namespace segmentation_helper

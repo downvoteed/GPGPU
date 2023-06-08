@@ -77,31 +77,13 @@ void process_webcam(const bool verbose, const unsigned int num_threads,
         colored_bg_frame = new cv::Mat(frame.clone());
       }
 
-      cv::Mat gray_bg_frame;
-      cv::cvtColor(*colored_bg_frame, gray_bg_frame, cv::COLOR_BGR2GRAY);
-
-      // Extract the texture features from the background frame in grayscale
-      for (unsigned int c = 0; c < w; c++) {
-        for (unsigned int r = 0; r < h; r++) {
-          // Update the color components from the background frame for the given
-          // coordinates
-          color_helper::convert(*colored_bg_frame, c, r,
-                                bg_colors->at(0)[r * w + c],
-                                bg_colors->at(1)[r * w + c]);
-
-          // Extract the texture features from the background frame for the
-          // given coordinates
-          (*bg_features)[r * w + c] =
-              texture_helper::calculateLBP(gray_bg_frame, c, r);
-        }
-      }
+      // Extract the background features
+      segmentation_helper::extract_frame(w, h, colored_bg_frame, bg_colors,
+                                         bg_features);
 
       if (verbose) {
         BOOST_LOG_TRIVIAL(info) << "Background features extracted";
       }
-
-      // Release the gray background frame
-      gray_bg_frame.release();
     }
 
     // Start a timer to measure the execution time
