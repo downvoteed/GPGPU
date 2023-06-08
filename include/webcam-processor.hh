@@ -83,6 +83,10 @@ void process_webcam(const bool verbose, const std::optional<unsigned int> width,
     // If ESC or Q is pressed, exit the loop
     const int key = cv::waitKey(1);
     if (key == 27 || key == 'q' || key == 'Q') {
+      // Release the frame
+      frame.release();
+      gray_frame.release();
+
       break;
     }
 
@@ -156,6 +160,7 @@ void process_webcam(const bool verbose, const std::optional<unsigned int> width,
   colored_bg_frame->release();
 
   // Free the memory
+  delete bg_colors;
   delete bg_features;
   delete colored_bg_frame;
 }

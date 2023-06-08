@@ -32,7 +32,7 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
   cv::Vec3b bg_pixel = colored_bg_frame->at<cv::Vec3b>(r, c);
 
   double weight = weights.at<double>(r, c);
-  double updated_weight;
+  double updated_weight = weight;
 
   if (value == 1) {
     // Compute the weighted average of the pixel values
@@ -42,26 +42,6 @@ void bg_optimization(cv::Mat *colored_bg_frame, const cv::Mat &colored_frame,
 
     // Update the weights with an adaptive learning rate
     updated_weight = learning_rate * weight + (1 - learning_rate);
-  } else {
-    // Calculate the absolute difference between the current pixel and the
-    // background pixel
-    uint8_t diff1 = pixel[1] - bg_pixel[1] > 0 ? pixel[1] - bg_pixel[1]
-                                               : bg_pixel[1] - pixel[1];
-    uint8_t diff2 = pixel[2] - bg_pixel[2] > 0 ? pixel[2] - bg_pixel[2]
-                                               : bg_pixel[2] - pixel[2];
-    uint8_t diff3 = pixel[3] - bg_pixel[3] > 0 ? pixel[3] - bg_pixel[3]
-                                               : bg_pixel[3] - pixel[3];
-
-    // Compute the average difference across the color channels
-    double average_diff = (diff1 + diff2 + diff3) / 3.0;
-
-    // Update the weight based on the average difference if it is greater than
-    // the threshold
-    if (average_diff > THRESHOLD) {
-      updated_weight = learning_rate * average_diff + (1 - learning_rate);
-    } else {
-      updated_weight = learning_rate * average_diff;
-    }
   }
 
   // Update the weights

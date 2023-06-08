@@ -175,6 +175,7 @@ void process_video(const bool verbose, const std::string &video_path,
 
   // Free the memory
   delete frames_vector;
+  delete bg_colors;
   delete bg_features;
   delete colored_bg_frame;
 
