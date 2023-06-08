@@ -47,6 +47,8 @@ void showFrame(const std::string &name, const cv::Mat &frame) {
 /**
  * Build a segmented frame from a vector of boolean values
  * (foreground/background)
+ * @param frame The frame to segment
+ * @param i The index of the current value
  * @param value 0 for foreground, 1 for background
  * @param width The width of the frame
  * @return The segmented frame

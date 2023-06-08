@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <chrono>
@@ -5,13 +7,24 @@
 #include <segmentation-helper.hh>
 #include <texture-helper.hh>
 
+/**
+ * Process a video file
+ * @param verbose Whether to display the log messages
+ * @param video_path The path to the video file
+ * @param width The width of the frames
+ * @param height The height of the frames
+ * @param output_path The path to the output video file
+ * @param num_threads The number of threads to use
+ * @param display Whether to display the segmented frames
+ * @param fps The FPS of the output video file
+ * @param alpha The alpha value for the background optimizer
+ */
 void process_video(const bool verbose, const std::string &video_path,
                    const std::optional<unsigned int> width,
                    const std::optional<unsigned int> height,
-                   boost::asio::thread_pool &pool,
                    const std::optional<std::string> output_path,
-                   const bool display, const unsigned int fps,
-                   const bool should_extract_bg) {
+                   const unsigned int num_threads, const bool display,
+                   const unsigned int fps, const double alpha) {
   // Start a timer to measure the execution time
   const auto start = std::chrono::high_resolution_clock::now();
 
@@ -55,12 +68,24 @@ void process_video(const bool verbose, const std::string &video_path,
     BOOST_LOG_TRIVIAL(info) << "Extracting the background frame";
   }
 
-  // Extract the texture features from the background frame in grayscale
+  // Extract the color components and texture features from the background frame
+  color_helper::color_vectors *bg_colors =
+      new color_helper::color_vectors{color_helper::color_vector(w * h, 0),
+                                      color_helper::color_vector(w * h, 0)};
   texture_helper::feature_vector *bg_features =
-      new texture_helper::feature_vector();
+      new texture_helper::feature_vector(w * h, 0);
+
   for (unsigned int c = 0; c < w; c++) {
     for (unsigned int r = 0; r < h; r++) {
-      bg_features->push_back(texture_helper::calculateLBP(gray_bg_frame, c, r));
+      // Extract the color components from the background frame for the given
+      // coordinates
+      color_helper::convert(*colored_bg_frame, c, r,
+                            bg_colors->at(0)[r * w + c],
+                            bg_colors->at(1)[r * w + c]);
+
+      // Extract the texture features from the background frame for the given
+      bg_features->at(r * w + c) =
+          texture_helper::calculateLBP(gray_bg_frame, c, r);
     }
   }
 
@@ -80,42 +105,42 @@ void process_video(const bool verbose, const std::string &video_path,
     // Create a new frame to store the result
     cv::Mat *result = new cv::Mat(h, w, CV_8UC1);
 
-    // Add a task to the thread pool
-    boost::asio::post(pool, [i, bg_features, colored_bg_frame, colored_frames,
-                             gray_frames, w, h, verbose, result,
-                             should_extract_bg]() {
-      segmentation_helper::segment_frame(i, colored_frames.size(), *bg_features,
-                                         colored_bg_frame, colored_frames[i],
-                                         gray_frames[i], w, h, verbose,
-                                         std::ref(*result), should_extract_bg);
+    segmentation_helper::segment_frame(
+        i, colored_frames.size(), colored_bg_frame, *bg_features, *bg_colors,
+        colored_frames[i], gray_frames[i], w, h, verbose, std::ref(*result),
+        num_threads, alpha);
 
-      // Update the background features
-      if (should_extract_bg) {
-        cv::Mat gray_background_frame;
-        cv::cvtColor(*colored_bg_frame, gray_background_frame,
-                     cv::COLOR_BGR2GRAY);
+    // Update the background features
+    if (alpha > 0) {
+      cv::Mat gray_background_frame;
+      cv::cvtColor(*colored_bg_frame, gray_background_frame,
+                   cv::COLOR_BGR2GRAY);
 
-        for (unsigned int c = 0; c < w; c++) {
-          for (unsigned int r = 0; r < h; r++) {
-            (*bg_features)[r * w + c] =
-                texture_helper::calculateLBP(gray_background_frame, c, r);
-          }
+      for (unsigned int c = 0; c < w; c++) {
+        for (unsigned int r = 0; r < h; r++) {
+          // Update the color components from the background frame for the given
+          // coordinates
+          color_helper::convert(*colored_bg_frame, c, r,
+                                bg_colors->at(0)[r * w + c],
+                                bg_colors->at(1)[r * w + c]);
+
+          // Extract the texture features from the background frame for the
+          // given coordinates
+          (*bg_features)[r * w + c] =
+              texture_helper::calculateLBP(gray_background_frame, c, r);
         }
-
-        // Release the gray background frame
-        gray_background_frame.release();
       }
 
-      // Free the memory by dropping the const
-      const_cast<cv::Mat &>(colored_frames[i]).release();
-      const_cast<cv::Mat &>(gray_frames[i]).release();
-    });
+      // Release the gray background frame
+      gray_background_frame.release();
+    }
+
+    // Free the memory by dropping the const
+    const_cast<cv::Mat &>(colored_frames[i]).release();
+    const_cast<cv::Mat &>(gray_frames[i]).release();
 
     segmented_frames.push_back(result);
   }
-
-  // Wait for all threads to finish
-  pool.join();
 
   if (verbose) {
     end = std::chrono::high_resolution_clock::now();
