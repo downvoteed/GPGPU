@@ -35,6 +35,7 @@ endif()
 
 if (NOT APPLE)
     enable_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 14)
 endif()
 
 find_package(OpenCV REQUIRED)
