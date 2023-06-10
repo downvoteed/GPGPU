@@ -1,5 +1,31 @@
 #include "segmentation-helper.cuh"
 
+#include "segmentation-helper.cuh"
+
+__global__ void calculate_lbp_kernel(uchar3* image, float* result, int width, int height) {
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	int idy = threadIdx.y + blockIdx.y * blockDim.y;
+
+	if (idx < width && idy < height) {
+		float center = 0.2989f * image[idy * width + idx].x + 0.5870f * image[idy * width + idx].y + 0.1140f * image[idy * width + idx].z;
+
+		uint8_t lbp = 0;
+
+		int directions[8][2] = { {-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0} };
+
+		for (int i = 0; i < 8; i++) {
+			int x = min(max(idx + directions[i][0], 0), width - 1);
+			int y = min(max(idy + directions[i][1], 0), height - 1);
+
+			float value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+
+			lbp = (lbp << 1) | (value < center);
+		}
+
+		result[idy * width + idx] = lbp;
+	}
+}
+
 __device__ __host__ uint8_t calculateLBP(uchar3* image, int idx, int idy, int width, int height) {
     float center = 0.2989f * image[idy * width + idx].x + 0.5870f * image[idy * width + idx].y + 0.1140f * image[idy * width + idx].z;
 

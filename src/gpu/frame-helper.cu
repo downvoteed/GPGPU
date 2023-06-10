@@ -1,11 +1,9 @@
 #include "frame-helper.cuh"
 #include "segmentation-helper.cuh"
 
-
 void process_frames(const std::string& input_path, const std::string& output_path) {
     cv::VideoCapture cap(input_path);
-    if (!cap.isOpened())
-    {
+    if (!cap.isOpened()) {
         std::cerr << "Unable to open the file" << std::endl;
         exit(1);
     }
@@ -18,8 +16,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     double fps = 30.0;
     cv::VideoWriter writer(output_path, fourcc, fps, frameSize, true);
 
-    if (!writer.isOpened())
-    {
+    if (!writer.isOpened()) {
         std::cerr << "Unable to open the output file for writing" << std::endl;
         exit(1);
     }
@@ -28,9 +25,11 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     int height = frame.rows;
     uchar3* d_image1;
     uchar3* d_image2;
+    uint8_t* d_lbpBackground;
     float* d_result;
     cudaMalloc(&d_image1, width * height * sizeof(uchar3));
     cudaMalloc(&d_image2, width * height * sizeof(uchar3));
+    cudaMalloc(&d_lbpBackground, width * height * sizeof(uint8_t));
     cudaMalloc(&d_result, width * height * sizeof(float));
 
     // Calculate LBP of the first frame and copy it to the GPU
@@ -40,9 +39,6 @@ void process_frames(const std::string& input_path, const std::string& output_pat
             h_lbpBackground[y * width + x] = calculateLBP(frame.ptr<uchar3>(), x, y, width, height);
         }
     }
-
-    uint8_t* d_lbpBackground;
-    cudaMalloc(&d_lbpBackground, width * height * sizeof(uint8_t));
     cudaMemcpy(d_lbpBackground, h_lbpBackground, width * height * sizeof(uint8_t), cudaMemcpyHostToDevice);
 
     dim3 blockSize(32, 32);
@@ -58,16 +54,17 @@ void process_frames(const std::string& input_path, const std::string& output_pat
 
         std::swap(d_image1, d_image2);
 
-        processed_frame.convertTo(processed_frame, CV_8UC1, 255.0);
-        cv::cvtColor(processed_frame, processed_frame, cv::COLOR_GRAY2BGR);
-        writer.write(processed_frame);
+        cv::Mat output_frame;
+        processed_frame.convertTo(output_frame, CV_8UC1, 255.0);
+        writer.write(output_frame);
 
     } while (cap.read(frame));
 
+    delete[] h_lbpBackground;
     cudaFree(d_image1);
     cudaFree(d_image2);
-    cudaFree(d_result);
     cudaFree(d_lbpBackground);
+    cudaFree(d_result);
 
     cap.release();
     writer.release();
