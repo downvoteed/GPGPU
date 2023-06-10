@@ -7,6 +7,11 @@
 - OpenCV
 - Boost
 
+## Nix environment
+```
+nix-shell
+```
+
 ## Build
 
 ```
