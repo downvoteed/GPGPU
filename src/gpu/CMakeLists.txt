@@ -1,6 +1,6 @@
 add_executable(gpu ${CPU_SRC} ${CPU_HEADERS})
 
-set(GPU_SRC "kernel.cu")
+set(GPU_SRC "kernel.cu" "frame-helper.cu" "segmentation-helper.cu")
 target_sources(gpu PRIVATE ${GPU_SRC})
 set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
@@ -11,5 +11,6 @@ if (NOT APPLE)
 endif()
 
 find_package(OpenCV REQUIRED)
-target_link_libraries(gpu PRIVATE ${CUDA_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(gpu PRIVATE ${CUDA_LIBRARIES} ${OpenCV_LIBS} ${Boost_LIBRARIES})
 include_directories(${CUDA_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS})
+target_include_directories(gpu PUBLIC ../../include)

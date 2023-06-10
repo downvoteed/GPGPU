@@ -287,7 +287,7 @@ void extract_frame(const unsigned int w, const unsigned int h,
     (*bg_features)[r * w] = texture_helper::calculateLBP(gray_bg_frame, 0, r);
 
     // Update the color components from the background frame for the given
-    color_helper::convert(*colored_bg_frame, c, r, bg_colors->at(0)[r * w],
+    color_helper::convert(*colored_bg_frame, 0, r, bg_colors->at(0)[r * w],
                           bg_colors->at(1)[r * w]);
 
     // Process the remaining pixels in the row
