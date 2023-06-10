@@ -46,9 +46,6 @@ __global__ void fuzzy_integral(uchar3* image1, uchar3* image2, uint8_t* lbpBackg
         g_ratio = (float)pixel1.y / (float)pixel2.y;
     }
 
-    // print pixels values
-     //printf("%d %d %d %d %d %d\n", pixel1.x, pixel1.y, pixel1.z, pixel2.x, pixel2.y, pixel2.z);
-
     uint8_t lbp1 = lbpBackground[idy * width + idx];
     uint8_t lbp2 = calculateLBP(image2, idx, idy, width, height);
 
@@ -68,7 +65,6 @@ __global__ void fuzzy_integral(uchar3* image1, uchar3* image2, uint8_t* lbpBackg
     }
 
     float final_result = coefficients[0] * 0.1f + coefficients[1] * 0.3f + coefficients[2] * 0.6f;
-   // printf("%f %f %f %f\n", coefficients[0], coefficients[1], coefficients[2], final_result);
-
-    result[idy * width + idx] = final_result > 0.67f ? 0 : 255;
+    result[idy * width + idx] = final_result > 0.67f ? 0.0f : 255.0f;
 }
+
