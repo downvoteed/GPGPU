@@ -32,6 +32,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     cudaMalloc(&d_image2, width * height * sizeof(uchar3));
     cudaMalloc(&d_lbpBackground, width * height * sizeof(uint8_t));
     cudaMalloc(&d_result, width * height * sizeof(float));
+    cudaMemcpy(d_image1, frame.ptr<uchar3>(), width * height * sizeof(uchar3), cudaMemcpyHostToDevice);
 
     // Calculate LBP of the first frame and copy it to the GPU
     uint8_t* h_lbpBackground = new uint8_t[width * height];
@@ -67,8 +68,6 @@ void process_frames(const std::string& input_path, const std::string& output_pat
         cudaMemcpyAsync(processed_frame.ptr<float>(), d_result, width * height * sizeof(float), cudaMemcpyDeviceToHost, stream);
         
         cudaStreamSynchronize(stream);
-
-        std::swap(d_image1, d_image2);
 
         cv::Mat output_frame;
         processed_frame.convertTo(output_frame, CV_8UC1, 255.0);
