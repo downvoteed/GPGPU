@@ -1,8 +1,21 @@
 #include "segmentation-helper.cuh"
 
-#include "segmentation-helper.cuh"
-
 __global__ void calculate_lbp_kernel(uchar3* image, float* result, int width, int height) {
+	__shared__ int directions[8][2];  // declare as shared memory
+
+	if (threadIdx.x == 0 && threadIdx.y == 0) {  // let the first thread initialize the shared data
+		directions[0][0] = -1; directions[0][1] = -1;
+		directions[1][0] = 0;  directions[1][1] = -1;
+		directions[2][0] = 1;  directions[2][1] = -1;
+		directions[3][0] = 1;  directions[3][1] = 0;
+		directions[4][0] = 1;  directions[4][1] = 1;
+		directions[5][0] = 0;  directions[5][1] = 1;
+		directions[6][0] = -1; directions[6][1] = 1;
+		directions[7][0] = -1; directions[7][1] = 0;
+	}
+
+	__syncthreads();  // make sure all threads in a block have the shared data before computation
+
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int idy = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -10,8 +23,6 @@ __global__ void calculate_lbp_kernel(uchar3* image, float* result, int width, in
 		float center = 0.2989f * image[idy * width + idx].x + 0.5870f * image[idy * width + idx].y + 0.1140f * image[idy * width + idx].z;
 
 		uint8_t lbp = 0;
-
-		int directions[8][2] = { {-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0} };
 
 		for (int i = 0; i < 8; i++) {
 			int x = min(max(idx + directions[i][0], 0), width - 1);
@@ -26,24 +37,66 @@ __global__ void calculate_lbp_kernel(uchar3* image, float* result, int width, in
 	}
 }
 
-__device__ __host__ uint8_t calculateLBP(uchar3* image, int idx, int idy, int width, int height) {
+__device__ __host__ uint8_t calculateLBP(const uchar3* image, int idx, int idy, int width, int height) {
     float center = 0.2989f * image[idy * width + idx].x + 0.5870f * image[idy * width + idx].y + 0.1140f * image[idy * width + idx].z;
 
     uint8_t lbp = 0;
 
-    int directions[8][2] = { {-1,-1}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0} };
+    // Unroll loop for 8 directions
+    int x, y;
+    float value;
 
-    for (int i = 0; i < 8; i++) {
-        int x = min(max(idx + directions[i][0], 0), width - 1);
-        int y = min(max(idy + directions[i][1], 0), height - 1);
+    // direction: {-1,-1}
+    x = min(max(idx - 1, 0), width - 1);
+    y = min(max(idy - 1, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 0;
 
-        float value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    // direction: {0,-1}
+    x = min(max(idx, 0), width - 1);
+    y = min(max(idy - 1, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 1;
 
-        lbp = (lbp << 1) | (value < center);
-    }
+    // direction: {1,-1}
+    x = min(max(idx + 1, 0), width - 1);
+    y = min(max(idy - 1, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 2;
+
+    // direction: {1,0}
+    x = min(max(idx + 1, 0), width - 1);
+    y = min(max(idy, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 3;
+
+    // direction: {1,1}
+    x = min(max(idx + 1, 0), width - 1);
+    y = min(max(idy + 1, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 4;
+
+    // direction: {0,1}
+    x = min(max(idx, 0), width - 1);
+    y = min(max(idy + 1, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 5;
+
+    // direction: {-1,1}
+    x = min(max(idx - 1, 0), width - 1);
+    y = min(max(idy + 1, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 6;
+
+    // direction: {-1,0}
+    x = min(max(idx - 1, 0), width - 1);
+    y = min(max(idy, 0), height - 1);
+    value = 0.2989f * image[y * width + x].x + 0.5870f * image[y * width + x].y + 0.1140f * image[y * width + x].z;
+    lbp |= static_cast<uint8_t>(value < center) << 7;
 
     return lbp;
 }
+
 
 __device__ float compare(uint8_t lbp1, uint8_t lbp2) {
     uint8_t vector = ~(lbp1 ^ lbp2);

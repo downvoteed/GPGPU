@@ -1,5 +1,6 @@
 #include "frame-helper.cuh"
 #include "segmentation-helper.cuh"
+#include <chrono>
 
 void process_frames(const std::string& input_path, const std::string& output_path) {
     cv::VideoCapture cap(input_path);
@@ -32,39 +33,62 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     cudaMalloc(&d_lbpBackground, width * height * sizeof(uint8_t));
     cudaMalloc(&d_result, width * height * sizeof(float));
 
-    // Calculate LBP of the first frame and copy it to the GPU
-    uint8_t* h_lbpBackground = new uint8_t[width * height];
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            h_lbpBackground[y * width + x] = calculateLBP(frame.ptr<uchar3>(), x, y, width, height);
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+
+    int batchSize = 10;
+    std::vector<cv::Mat> frames(batchSize);
+
+    while (true) {
+        size_t i = 0;
+        for (; i < batchSize && cap.read(frame); ++i) {
+            frames[i] = frame.clone();
+        }
+        if (i == 0) 
+            break;  
+
+        frames[0] = frame.clone();
+        for (int i = 1; i < batchSize && cap.read(frame); ++i) {
+            frames[i] = frame.clone();
+        }
+
+        int frameCount = 0;
+        auto start = std::chrono::high_resolution_clock::now();
+
+        auto blockSize = dim3(128, 128);
+        auto gridSize = dim3((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+
+        for (size_t i = 0; i < frames.size(); ++i) {
+
+            cudaMemcpyAsync(d_image2, frames[i].ptr<uchar3>(), width * height * sizeof(uchar3), cudaMemcpyHostToDevice, stream);
+
+            fuzzy_integral << <gridSize, blockSize, 0, stream >> > (d_image1, d_image2, d_lbpBackground, d_result, width, height);
+
+            cv::Mat processed_frame(height, width, CV_32F);
+            cudaMemcpyAsync(processed_frame.ptr<float>(), d_result, width * height * sizeof(float), cudaMemcpyDeviceToHost, stream);
+
+            cudaStreamSynchronize(stream);
+
+            std::swap(d_image1, d_image2);
+
+            cv::Mat output_frame;
+            processed_frame.convertTo(output_frame, CV_8UC1, 255.0);
+            writer.write(output_frame);
+
+            frameCount++;
+            if (frameCount % 100 == 0) { 
+                auto now = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - start);
+                std::cout << "Frames per second: " << static_cast<double>(frameCount) / duration.count() << std::endl;
+            }
         }
     }
-    cudaMemcpy(d_lbpBackground, h_lbpBackground, width * height * sizeof(uint8_t), cudaMemcpyHostToDevice);
 
-    dim3 blockSize(32, 32);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
-
-    do {
-        cudaMemcpy(d_image2, frame.ptr<uchar3>(), width * height * sizeof(uchar3), cudaMemcpyHostToDevice);
-
-        fuzzy_integral<<<gridSize, blockSize>>>(d_image1, d_image2, d_lbpBackground, d_result, width, height);
-
-        cv::Mat processed_frame(height, width, CV_32F);
-        cudaMemcpy(processed_frame.ptr<float>(), d_result, width * height * sizeof(float), cudaMemcpyDeviceToHost);
-
-        std::swap(d_image1, d_image2);
-
-        cv::Mat output_frame;
-        processed_frame.convertTo(output_frame, CV_8UC1, 255.0);
-        writer.write(output_frame);
-
-    } while (cap.read(frame));
-
-    delete[] h_lbpBackground;
     cudaFree(d_image1);
     cudaFree(d_image2);
     cudaFree(d_lbpBackground);
     cudaFree(d_result);
+    cudaStreamDestroy(stream);
 
     cap.release();
     writer.release();
