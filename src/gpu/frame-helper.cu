@@ -76,9 +76,9 @@ void process_frames(const std::string& input_path, const std::string& output_pat
         cudaMemcpy2DAsync(processed_frame.ptr<float>(), width * sizeof(float), d_result, width * sizeof(float), width * sizeof(float), height, cudaMemcpyDeviceToHost, stream1);
         cudaStreamSynchronize(stream1);
 
-        cv::Mat output_frame;
-        processed_frame.convertTo(output_frame, CV_8UC1, 255.0);
-        writer.write(output_frame);
+        processed_frame.convertTo(processed_frame, CV_8UC1, 255.0);
+        cv::cvtColor(processed_frame, processed_frame, cv::COLOR_GRAY2BGR);
+        writer.write(processed_frame);
     } while (isFrameRead);
 
     delete[] h_lbpBackground;
