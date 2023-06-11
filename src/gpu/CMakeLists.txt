@@ -6,7 +6,7 @@ set(CMAKE_CUDA_FLAGS_DEBUG "-g -G")
 
 
 if (NOT APPLE)
-    set_property(TARGET gpu PROPERTY CUDA_ARCHITECTURES native)
+    set_property(TARGET gpu PROPERTY CUDA_ARCHITECTURES 80)
     find_package(CUDAToolkit REQUIRED)
 endif()
 
