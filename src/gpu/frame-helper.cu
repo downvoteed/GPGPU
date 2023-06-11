@@ -13,7 +13,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     cap.read(frame);
     cv::Size frameSize = frame.size();
 
-    int fourcc = cv::VideoWriter::fourcc('H', '2', '6', '4');
+    int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
     double fps = 30.0;
     cv::VideoWriter writer(output_path, fourcc, fps, frameSize, true);
 
@@ -34,6 +34,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     cudaMalloc(&d_result, width * height * sizeof(float));
     cudaMemcpy(d_image1, frame.ptr<uchar3>(), width * height * sizeof(uchar3), cudaMemcpyHostToDevice);
 
+    // Calculate LBP of the first frame and copy it to the GPU
     uint8_t* h_lbpBackground = new uint8_t[width * height];
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -41,11 +42,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
         }
     }
 
-    cudaStream_t stream1, stream2;
-    cudaStreamCreate(&stream1);
-    cudaStreamCreate(&stream2);
-
-    cudaMemcpyAsync(d_lbpBackground, h_lbpBackground, width * height * sizeof(uint8_t), cudaMemcpyHostToDevice, stream1);
+    cudaMemcpyAsync(d_lbpBackground, h_lbpBackground, width * height * sizeof(uint8_t), cudaMemcpyHostToDevice);
 
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
@@ -53,6 +50,11 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     int frameCount = 0;
     auto start = std::chrono::high_resolution_clock::now();
     bool isFrameRead = true;
+
+    // Launch kernel asynchronously with multiple streams
+    cudaStream_t stream1, stream2;
+    cudaStreamCreate(&stream1);
+    cudaStreamCreate(&stream2);
 
     do {
         frameCount++;
@@ -71,7 +73,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
         }
 
         cv::Mat processed_frame(height, width, CV_32F);
-        cudaMemcpyAsync(processed_frame.ptr<float>(), d_result, width * height * sizeof(float), cudaMemcpyDeviceToHost, stream1);
+        cudaMemcpy2DAsync(processed_frame.ptr<float>(), width * sizeof(float), d_result, width * sizeof(float), width * sizeof(float), height, cudaMemcpyDeviceToHost, stream1);
         cudaStreamSynchronize(stream1);
 
         cv::Mat output_frame;
