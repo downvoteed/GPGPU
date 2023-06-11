@@ -47,8 +47,6 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-    int frameCount = 0;
-    auto start = std::chrono::high_resolution_clock::now();
     bool isFrameRead = true;
 
     // Launch kernel asynchronously with multiple streams
@@ -56,12 +54,21 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     cudaStreamCreate(&stream1);
     cudaStreamCreate(&stream2);
 
-    do {
-        if (frameCount++ % 1000 == 0) {
-            auto now = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - start);
-            std::cout << "Frames per second: " << static_cast<double>(frameCount) / duration.count() << std::endl;
-        }
+	auto tStart = std::chrono::steady_clock::now();
+	auto tNow = tStart;
+	int frameCount = 0;
+
+
+	do {
+		++frameCount;
+		// Time since start of current second
+		auto timeFromStartMs = std::chrono::duration_cast<std::chrono::milliseconds>(tNow - tStart);
+		if (timeFromStartMs.count() >= 500) {  // Check if 500ms have passed
+			// One second has passed
+			std::cout << "Frames per second: " << frameCount << std::endl;
+			frameCount = 0;  // Reset frame count
+			tStart = tNow;  // Reset start time
+		}
 
         cudaMemcpyAsync(d_image2, frame.ptr<uchar3>(), width * height * sizeof(uchar3), cudaMemcpyHostToDevice, stream1);
         fuzzy_integral<<<gridSize, blockSize, 0, stream1>>>(d_image1, d_image2, d_lbpBackground, d_result, width, height);
@@ -78,6 +85,8 @@ void process_frames(const std::string& input_path, const std::string& output_pat
         processed_frame.convertTo(processed_frame, CV_8UC1, 255.0);
         cv::cvtColor(processed_frame, processed_frame, cv::COLOR_GRAY2BGR);
         writer.write(processed_frame);
+		tNow = std::chrono::steady_clock::now();
+
     } while (isFrameRead);
 
     delete[] h_lbpBackground;
