@@ -57,8 +57,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
     cudaStreamCreate(&stream2);
 
     do {
-        frameCount++;
-        if (frameCount % 100 == 0) {
+        if (frameCount++ % 1000 == 0) {
             auto now = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - start);
             std::cout << "Frames per second: " << static_cast<double>(frameCount) / duration.count() << std::endl;
