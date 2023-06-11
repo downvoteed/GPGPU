@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
                                           "set the input video path")(
       "width", po::value<unsigned int>(), "set the width of the frame")(
       "height", po::value<unsigned int>(), "set the height of the frame")(
-      "display,d", po::value<bool>()->default_value(true),
+      "display,d", po::value<bool>()->default_value(false),
       "display the segmented frames")(
       "output,o", po::value<std::string>(),
       "if set, save the video to the given path")(
