@@ -20,7 +20,6 @@ if(NOT OpenCV_FOUND)
         GIT_TAG        master
     )
 
-    set(BUILD_LIST "core;")  # customize this list according to your needs
     set(BUILD_DOCS OFF CACHE BOOL "" FORCE)  # disable building of documentation
     set(BUILD_opencv_dnn OFF CACHE BOOL "" FORCE)  # disable building of DNN module
 
