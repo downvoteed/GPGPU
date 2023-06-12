@@ -1,0 +1,16 @@
+ncu --metrics group:memory__chart \
+--launch-count 1
+--target-processes all \
+--section "MemoryWorkloadAnalysis" \
+--section "MemoryWorkloadAnalysis_Chart" \
+--section "MemoryWorkloadAnalysis_Tables" \
+--section "ComputeWorkloadAnalysis" \
+--section "LaunchStats" \
+--section "SchedulerStats" \
+--section "SourceCounters" \
+--section "Occupancy" \
+--section "SpeedOfLight" \
+--section "WarpStateStats" \
+--section "InstructionStats" \
+--section "SpeedOfLight_RooflineChart" \
+--section MemoryWorkloadAnalysis_Chart --set full -o latest -f .\out\build\x64-Debug\src\gpu\gpu.exe -i .\dataset\video.avi -o .\dataset\output.mp4     
