@@ -1,6 +1,11 @@
 #include "frame-helper.cuh"
 #include "segmentation-helper.cuh"
 #include <chrono>
+#include <iostream>
+#include <opencv2/video.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 void process_frames(const std::string& input_path, const std::string& output_path) {
     cv::VideoCapture cap(input_path);

@@ -1,7 +1,9 @@
 #include "cuda_runtime.h"
-#include "opencv2/opencv.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include <stdio.h>
 #include <vector>
+#include <iostream>
 #include <boost/program_options.hpp>
 #include "frame-helper.cuh"
 #include "segmentation-helper.cuh"
