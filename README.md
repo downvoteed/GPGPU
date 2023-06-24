@@ -46,3 +46,7 @@ cmake --build build
 ./build/src/cpu/cpu -i ./dataset/video.avi
 ./build/src/cpu/cpu -w
 ```
+
+## Known issues
+
+- Output video has blinking frames on RTX 4060.
