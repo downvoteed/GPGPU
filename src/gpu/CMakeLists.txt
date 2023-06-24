@@ -4,11 +4,13 @@ set(GPU_SRC "kernel.cu" "frame-helper.cu" "segmentation-helper.cu")
 target_sources(gpu PRIVATE ${GPU_SRC})
 
 if (NOT APPLE)
-    set_property(TARGET gpu PROPERTY CUDA_ARCHITECTURES 80)
+    set_property(TARGET gpu PROPERTY CUDA_ARCHITECTURES native)
     find_package(CUDAToolkit REQUIRED)
 endif()
 
+#optimiziation flags
 target_compile_options(gpu PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+                       --use_fast_math
                        >)
 
 
