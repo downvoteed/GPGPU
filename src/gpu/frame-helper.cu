@@ -21,7 +21,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
 	std::cout << "Number of frames: " << cap.get(cv::CAP_PROP_FRAME_COUNT) << std::endl;
 
     int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-    double fps = 30.0;
+    double fps = cap.get(cv::CAP_PROP_FPS);
     cv::VideoWriter writer(output_path, fourcc, fps, frameSize, true);
 
     if (!writer.isOpened()) {
@@ -56,7 +56,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
 
     bool isFrameRead = true;
 
-    // Launch kernel asynchronously with multiple streams
+    // Launch kernel asynchronously with two streams
     cudaStream_t stream1, stream2;
     cudaStreamCreate(&stream1);
     cudaStreamCreate(&stream2);
@@ -71,11 +71,11 @@ void process_frames(const std::string& input_path, const std::string& output_pat
 		++frameCount;
 		// Time since start of current second
 		auto timeFromStartMs = std::chrono::duration_cast<std::chrono::milliseconds>(tNow - tStart);
-		if (timeFromStartMs.count() >= 1000) {  // Check if 500ms have passed
-			// One second has passed
+		if (timeFromStartMs.count() >= 1000)
+        { 
 			std::cout << "Frames per second: " << frameCount << std::endl;
-			frameCount = 0;  // Reset frame count
-			tStart = tNow;  // Reset start time
+			frameCount = 0; 
+			tStart = tNow; 
 		}
 
         cudaMemcpyAsync(d_image2, frame.ptr<uchar3>(), width * height * sizeof(uchar3), cudaMemcpyHostToDevice, stream1);
@@ -97,7 +97,7 @@ void process_frames(const std::string& input_path, const std::string& output_pat
 
     } while (isFrameRead);
 
-    // average fps
+    // compute average fps
     tNow = std::chrono::steady_clock::now();
     std::cout << "Average FPS: " << cap.get(cv::CAP_PROP_FRAME_COUNT) / std::chrono::duration_cast<std::chrono::milliseconds>(tNow - toriginal).count() * 1000 << std::endl;
 

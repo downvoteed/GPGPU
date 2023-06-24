@@ -9,6 +9,7 @@
 using namespace cv;
 namespace po = boost::program_options;
 
+// TODO : support more options
 int main(int argc, char** argv)
 {
     // Declare the supported options.
