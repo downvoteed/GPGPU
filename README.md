@@ -1,6 +1,6 @@
 # gpgpu
 
-![Build linux](https://github.com/downvoteed/GPGPU/actions/workflows/build.yml/badge.svg)
+![Build linux](https://github.com/downvoteed/GPGPU/actions/workflows/build-linux.yml/badge.svg)
 
 ## Requirements
 
