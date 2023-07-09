@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cmath>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <vector>
 
 namespace color_helper {

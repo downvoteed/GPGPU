@@ -1,7 +1,11 @@
 #pragma once
 
 #include <logger.hh>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp> 
+#include <opencv2/imgproc.hpp> 
+
 
 namespace frame_helper {
 using frames = std::vector<cv::Mat>;
