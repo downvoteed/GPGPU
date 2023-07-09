@@ -1,12 +1,15 @@
-file(GLOB CPU_SRC
-    "*.cc"
+set(CPU_SRC
+	"color-helper.cc"
+	"frame-helper.cc"
+	"segmentation-helper.cc"
+	"video-processor.cc"
+	"texture-helper.cc"
+	"webcam-processor.cc"
+	"logger.cc"
+	"main.cc"
 )
 
-file(GLOB CPU_HEADERS
-    "*.hh"
-)
-
-add_executable(cpu ${CPU_SRC} ${CPU_HEADERS})
+add_executable(cpu ${CPU_SRC})
 
 find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options log thread)

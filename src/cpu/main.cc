@@ -1,138 +1,147 @@
 #include <boost/asio/thread_pool.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
-
-#include "../stats/rss.hh"
 #include <logger.hh>
 #include <video-processor.hh>
 #include <webcam-processor.hh>
 
+#include "../stats/rss.hh"
+
 namespace po = boost::program_options;
 
-int main(int argc, char **argv) {
-  // LogRss logger;
+int main(int argc, char** argv)
+{
+    // LogRss logger;
 
-  // Declare the supported options.
-  po::options_description desc("Allowed options");
-  desc.add_options()("help,h", "produce help message")("verbose,v",
-                                                       "enable verbose mode")(
-      "log-file,l", po::value<std::string>(), "set the log file path")(
-      "log-level,L", po::value<std::string>()->default_value("info"),
-      "set the logging level)")(
-      "jobs,j",
-      po::value<unsigned int>()->default_value(1)->implicit_value(
-          std::thread::hardware_concurrency()),
-      "set the number of threads to use")("input,i", po::value<std::string>(),
-                                          "set the input video path")(
-      "width", po::value<unsigned int>(), "set the width of the frame")(
-      "height", po::value<unsigned int>(), "set the height of the frame")(
-      "display,d", po::value<bool>()->default_value(false),
-      "display the segmented frames")(
-      "output,o", po::value<std::string>(),
-      "if set, save the video to the given path")(
-      "fps,f", po::value<unsigned int>()->default_value(24),
-      "set the FPS of the video")("webcam,w", "use the webcam as input")(
-      "flipped", "flip the webcam stream")(
-      "background-optimizer", po::value<double>()->default_value(0),
-      "learning rate value for the background optimizer (default: 0 for "
-      "videos, 0.1 for webcam)");
+    // Declare the supported options.
+    po::options_description desc("Allowed options");
+    desc.add_options()("help,h", "produce help message")("verbose,v",
+                                                         "enable verbose mode")(
+        "log-file,l", po::value<std::string>(), "set the log file path")(
+        "log-level,L", po::value<std::string>()->default_value("info"),
+        "set the logging level)")(
+        "jobs,j",
+        po::value<unsigned int>()->default_value(1)->implicit_value(
+            std::thread::hardware_concurrency()),
+        "set the number of threads to use")("input,i", po::value<std::string>(),
+                                            "set the input video path")(
+        "width", po::value<unsigned int>(), "set the width of the frame")(
+        "height", po::value<unsigned int>(), "set the height of the frame")(
+        "display,d", po::value<bool>()->default_value(false),
+        "display the segmented frames")(
+        "output,o", po::value<std::string>(),
+        "if set, save the video to the given path")(
+        "fps,f", po::value<unsigned int>()->default_value(24),
+        "set the FPS of the video")("webcam,w", "use the webcam as input")(
+        "flipped", "flip the webcam stream")(
+        "background-optimizer", po::value<double>()->default_value(0),
+        "learning rate value for the background optimizer (default: 0 for "
+        "videos, 0.1 for webcam)");
 
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
 
-  // Check if the help flag is set
-  if (vm.count("help")) {
-    std::cout << desc << "\n";
-    return 1;
-  }
+    // Check if the help flag is set
+    if (vm.count("help"))
+    {
+        std::cout << desc << "\n";
+        return 1;
+    }
 
-  // Exit if both the input and the webcam flags are set
-  if (vm.count("input") && vm.count("webcam")) {
-    std::cout << "The input and the webcam flags cannot be set at the same "
-                 "time!\n";
-    return 1;
-  }
+    // Exit if both the input and the webcam flags are set
+    if (vm.count("input") && vm.count("webcam"))
+    {
+        std::cout << "The input and the webcam flags cannot be set at the same "
+                     "time!\n";
+        return 1;
+    }
 
-  // Exit if neither the input nor the webcam flags are set
-  if (!vm.count("input") && !vm.count("webcam")) {
-    std::cout << "Either the input or the webcam flag must be set!\n";
-    return 1;
-  }
+    // Exit if neither the input nor the webcam flags are set
+    if (!vm.count("input") && !vm.count("webcam"))
+    {
+        std::cout << "Either the input or the webcam flag must be set!\n";
+        return 1;
+    }
 
-  // Set the logging level
-  std::string log_level = vm["log-level"].as<std::string>();
-  if (log_level != "trace" && log_level != "debug" && log_level != "info" &&
-      log_level != "warning" && log_level != "error" && log_level != "fatal") {
-    BOOST_LOG_TRIVIAL(error) << "Invalid logging level!";
-    BOOST_LOG_TRIVIAL(error)
-        << "Valid values are: trace, debug, info, warning, error, fatal";
-    return 1;
-  }
+    // Set the logging level
+    std::string log_level = vm["log-level"].as<std::string>();
+    if (log_level != "trace" && log_level != "debug" && log_level != "info"
+        && log_level != "warning" && log_level != "error"
+        && log_level != "fatal")
+    {
+        BOOST_LOG_TRIVIAL(error) << "Invalid logging level!";
+        BOOST_LOG_TRIVIAL(error)
+            << "Valid values are: trace, debug, info, warning, error, fatal";
+        return 1;
+    }
 
-  set_logging_level(log_level);
+    set_logging_level(log_level);
 
-  // Check if the verbose flag is set
-  const bool verbose = vm.count("verbose") > 0 || vm.count("log-file") > 0;
-  if (verbose) {
-    auto log_file = vm.count("log-file") > 0
-                        ? std::make_optional(vm["log-file"].as<std::string>())
-                        : std::nullopt;
+    // Check if the verbose flag is set
+    const bool verbose = vm.count("verbose") > 0 || vm.count("log-file") > 0;
+    if (verbose)
+    {
+        auto log_file = vm.count("log-file") > 0
+            ? std::make_optional(vm["log-file"].as<std::string>())
+            : std::nullopt;
 
-    init_logging(vm.count("verbose") > 0, log_file);
-    BOOST_LOG_TRIVIAL(info) << "Starting the program";
-  }
+        init_logging(vm.count("verbose") > 0, log_file);
+        BOOST_LOG_TRIVIAL(info) << "Starting the program";
+    }
 
-  // Determine the number of threads to use
-  unsigned int num_threads = vm["jobs"].as<unsigned int>();
+    // Determine the number of threads to use
+    unsigned int num_threads = vm["jobs"].as<unsigned int>();
 
-  const unsigned int max_threads = std::thread::hardware_concurrency();
-  if (num_threads == 0 || num_threads > max_threads) {
-    num_threads = max_threads;
-  }
+    const unsigned int max_threads = std::thread::hardware_concurrency();
+    if (num_threads == 0 || num_threads > max_threads)
+    {
+        num_threads = max_threads;
+    }
 
-  if (verbose) {
-    BOOST_LOG_TRIVIAL(info) << "Using " << num_threads << " threads";
-  }
+    if (verbose)
+    {
+        BOOST_LOG_TRIVIAL(info) << "Using " << num_threads << " threads";
+    }
 
-  // If an input path is provided, process the video
-  if (vm.count("input")) {
-    // Determine the input path
-    const std::string input_path = vm["input"].as<std::string>();
+    // If an input path is provided, process the video
+    if (vm.count("input"))
+    {
+        // Determine the input path
+        const std::string input_path = vm["input"].as<std::string>();
 
-    // Determine the width and height of the frame
-    const std::optional<unsigned int> width =
-        vm.count("width") > 0
+        // Determine the width and height of the frame
+        const std::optional<unsigned int> width = vm.count("width") > 0
             ? std::make_optional(vm["width"].as<unsigned int>())
             : std::nullopt;
-    const std::optional<unsigned int> height =
-        vm.count("height") > 0
+        const std::optional<unsigned int> height = vm.count("height") > 0
             ? std::make_optional(vm["height"].as<unsigned int>())
             : std::nullopt;
 
-    // Determine the output path
-    const std::optional<std::string> output_path =
-        vm.count("output") > 0
+        // Determine the output path
+        const std::optional<std::string> output_path = vm.count("output") > 0
             ? std::make_optional(vm["output"].as<std::string>())
             : std::nullopt;
 
-    process_video(verbose, input_path, width, height, output_path, num_threads,
-                  vm["display"].as<bool>(), vm["fps"].as<unsigned int>(),
-                  vm["background-optimizer"].as<double>());
-  }
+        process_video(verbose, input_path, width, height, output_path,
+                      num_threads, vm["display"].as<bool>(),
+                      vm["fps"].as<unsigned int>(),
+                      vm["background-optimizer"].as<double>());
+    }
 
-  // If the webcam flag is set, process the webcam stream
-  if (vm.count("webcam")) {
-    process_webcam(verbose,
-                   vm.count("width") > 0
-                       ? std::make_optional(vm["width"].as<unsigned int>())
-                       : std::nullopt,
-                   vm.count("height") > 0
-                       ? std::make_optional(vm["height"].as<unsigned int>())
-                       : std::nullopt,
-                   vm.count("flipped") > 0, num_threads,
-                   vm["background-optimizer"].as<double>());
-  }
+    // If the webcam flag is set, process the webcam stream
+    if (vm.count("webcam"))
+    {
+        process_webcam(verbose,
+                       vm.count("width") > 0
+                           ? std::make_optional(vm["width"].as<unsigned int>())
+                           : std::nullopt,
+                       vm.count("height") > 0
+                           ? std::make_optional(vm["height"].as<unsigned int>())
+                           : std::nullopt,
+                       vm.count("flipped") > 0, num_threads,
+                       vm["background-optimizer"].as<double>());
+    }
 
-  return 0;
+    return 0;
 }
