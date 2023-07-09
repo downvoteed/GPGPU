@@ -20,7 +20,7 @@ jobs:
       with:
         cuda: '12.1.0'
         method: 'network'
-        sub-packages: '["nvcc"]'
+        sub-packages: '["nvcc", "visual_studio_integration"]'
     - name: Install and setup vcpkg
       run: |
         git clone https://github.com/Microsoft/vcpkg.git
