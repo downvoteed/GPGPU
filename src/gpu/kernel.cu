@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <vector>
 
-#include "cuda_runtime.h"
 #include "frame-helper.cuh"
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"

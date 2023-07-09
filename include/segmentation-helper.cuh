@@ -1,7 +1,5 @@
 #include <stdint.h>
 
-#include "cuda_runtime.h"
-
 __device__ __host__ uint8_t calculateLBP(const uchar3* image, int idx, int idy,
                                          int width, int height);
 
