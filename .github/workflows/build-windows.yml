@@ -31,8 +31,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .\vcpkg\vcpkg install boost
-        .\vcpkg\vcpkg install opencv4[windows]:x64-windows
+        .\vcpkg\vcpkg install boost:x64-windows
+        .\vcpkg\vcpkg install opencv4[core]:x64-windows
       shell: cmd
 
     - name: Configure CMake
