@@ -1,5 +1,7 @@
 # gpgpu
 
+![Build linux](https://github.com/downvoteed/GPGPU/actions/workflows/build.yml/badge.svg)
+
 ## Requirements
 
 - CMake
