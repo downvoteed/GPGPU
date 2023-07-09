@@ -2,10 +2,6 @@ name: build windows
 
 on: push
 
-env:
-  BUILD_TYPE: Release
-  VCPKG_DIR: ${{ github.workspace }}/vcpkg
-  VCPKG_CACHE_KEY: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
 
 jobs:
   build:
@@ -18,7 +14,7 @@ jobs:
       with:
         cuda: '12.1.0'
         method: 'network'
-        sub-packages: '["nvcc"]'
+        sub-packages: '["nvcc", "cudart"]'
 
     - name: Setup vcpkg
       run: |
@@ -30,8 +26,9 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ env.VCPKG_DIR }}/installed
-        key: ${{ env.VCPKG_CACHE_KEY }}
-        restore-keys: ${{ env.VCPKG_CACHE_KEY }}
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
+        restore-keys: ${{ runner.os }}-vcpkg-
+
 
     - name: Install dependencies
       run: |
