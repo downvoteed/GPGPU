@@ -1,13 +1,11 @@
 name: build windows
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: push
 
 env:
   BUILD_TYPE: Release
+  VCPKG_DIR: ${{ github.workspace }}/vcpkg
+  VCPKG_CACHE_KEY: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
 
 jobs:
   build:
@@ -16,18 +14,24 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: Jimver/cuda-toolkit@v0.2.9
-      id: cuda-toolkit
-      with:
-        cuda: '12.1.0'
-        method: 'network'
-        sub-packages: '["nvcc", "visual_studio_integration"]'
-    - name: Install and setup vcpkg
+     id: cuda-toolkit
+     with:
+       cuda: '12.1.0'
+       method: 'network'
+       sub-packages: '["nvcc"]'
+
+    - name: Setup vcpkg
       run: |
         git clone https://github.com/Microsoft/vcpkg.git
         cd vcpkg
-        ./bootstrap-vcpkg.bat
-        ./vcpkg integrate install
-      shell: cmd
+        .\bootstrap-vcpkg.bat
+
+    - name: Cache vcpkg dependencies
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.VCPKG_DIR }}/installed
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        restore-keys: ${{ env.VCPKG_CACHE_KEY }}
 
     - name: Install dependencies
       run: |
@@ -38,7 +42,6 @@ jobs:
     - name: Configure CMake
       run: cmake -S . -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
       shell: cmd
-
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
