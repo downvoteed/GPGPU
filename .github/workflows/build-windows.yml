@@ -14,7 +14,7 @@ jobs:
       with:
         cuda: '12.1.0'
         method: 'network'
-        sub-packages: '["nvcc", "cudart"]'
+        sub-packages: '["nvcc", "cudart", "visual_studio_integration"]'
 
     - name: Setup vcpkg
       run: |
