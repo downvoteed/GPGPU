@@ -2,6 +2,8 @@ name: build windows
 
 on: push
 
+env:
+  BUILD_TYPE: Release
 
 jobs:
   build:
@@ -28,7 +30,6 @@ jobs:
         path: ${{ env.VCPKG_DIR }}/installed
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
         restore-keys: ${{ runner.os }}-vcpkg-
-
 
     - name: Install dependencies
       run: |
