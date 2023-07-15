@@ -14,7 +14,6 @@ jobs:
     - uses: Jimver/cuda-toolkit@v0.2.11
       id: cuda-toolkit
       with:
-        cuda: '12.2.0'
         method: 'network'
         sub-packages: '["nvcc", "cudart", "visual_studio_integration", "cufft", "cublas", "curand", "cusolver", "cusparse", "npp", "nvgraph", "nvrtc"]'
   
