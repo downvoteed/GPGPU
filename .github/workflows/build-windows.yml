@@ -1,0 +1,45 @@
+name: build windows
+
+on: push
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: Jimver/cuda-toolkit@v0.2.11
+      id: cuda-toolkit
+      with:
+        method: 'network'
+        sub-packages: '["nvcc", "cudart", "visual_studio_integration", "cufft", "cublas", "curand", "cusolver", "cusparse", "npp", "nvgraph", "nvrtc"]'
+  
+
+    - name: Setup vcpkg
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        .\bootstrap-vcpkg.bat
+
+    - name: Cache vcpkg dependencies
+      uses: actions/cache@v2
+      with:
+        path: ${{ env.VCPKG_DIR }}/installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
+        restore-keys: ${{ runner.os }}-vcpkg-
+
+    - name: Install dependencies
+      run: |
+        .\vcpkg\vcpkg install boost:x64-windows
+        .\vcpkg\vcpkg install opencv4[core]:x64-windows
+      shell: cmd
+
+    - name: Configure CMake
+      run: cmake -S . -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      shell: cmd
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
