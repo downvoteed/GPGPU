@@ -9,11 +9,6 @@
 - OpenCV
 - Boost
 
-## Nix environment
-```
-nix-shell
-```
-
 ## Build
 
 ```
@@ -41,6 +36,14 @@ cmake --build build
 - `--width` : width of the output video
 - `--height` : height of the output video
 - `--background-optimizer` : background optimizer (default for webcam)
+
+## Run GPU
+
+### Must use options
+
+- `-i` or `--input` : input video file path
+- `-o` or `--output` : output video file path
+
 
 ### Example
 
