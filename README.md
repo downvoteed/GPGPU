@@ -1,4 +1,4 @@
-# gpgpu
+# GPGPU
 
 ![Build linux](https://github.com/downvoteed/GPGPU/actions/workflows/build-linux.yml/badge.svg)
 
@@ -48,8 +48,12 @@ cmake --build build
 ### Example
 
 ```sh
+# CPU version
 ./build/src/cpu/cpu -i ./dataset/video.avi
 ./build/src/cpu/cpu -w
+
+#GPU version
+./build/src/gpu/gpu -i ./dataset/video.avi -o ./output.avi
 ```
 
 ## Known issues
