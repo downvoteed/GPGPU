@@ -4,7 +4,6 @@ import time
 import csv
 import nvidia_smi
 
-# Start your program
 process = subprocess.Popen(["./build/src/gpu/gpu", "-i", "dataset/tokyo.mp4", "-o", "dataset/tokyo_output.mp4"])
 
 # Open the output files

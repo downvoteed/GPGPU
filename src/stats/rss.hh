@@ -90,8 +90,6 @@ size_t get_peak_rss()
 
 #endif
 
-// Often it's not convenient to report memory usage in bytes, numbers are too
-// big and unreadable. Convert to MB.
 double toMB(size_t size_in_bytes)
 {
     return double(size_in_bytes) / (1024.0 * 1024.0);
